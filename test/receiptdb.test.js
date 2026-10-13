@@ -32,7 +32,10 @@ test('search hits are accepted as the same dish (another spelling), a similar di
   assert.equal(acceptHit([hit('Roast Beef', 2, 9)], { name: 'Sunday Roast' }), null);               // not near the top of both
   assert.equal(acceptHit([hit('Lemon Pudding', 1, 1)], { name: 'Sunday Roast' }), null);            // no word in common
   assert.equal(acceptHit([hit('Turkey Stuffing (Swedish Style)', 3, 1)], { name: 'Köttbullar (Swedish Meatballs)' }), null); // a shared place word is not the dish
-  assert.equal(acceptHit([hit('BAKED CHICKEN AND NOODLES', 3, 2)], { name: 'Chicken and Noodles' }).kind, 'similar');          // the dish's own noun is shared
+  assert.equal(acceptHit([hit('BAKED CHICKEN AND NOODLES', 3, 2)], { name: 'Chicken and Noodles' }).kind, 'similar');
+  assert.equal(acceptHit([hit('DINNER', 1, 1)], { name: 'Roast Beef Dinner' }), null);                                                  // a mealtime word is not the dish
+  assert.equal(acceptHit([hit('Scottish Fancies', 1, 3)], { name: 'Scottish Oatcakes' }), null);                                       // one shared word of two
+  assert.equal(acceptHit([hit('CREAM OF CHICKEN AND NOODLES', 1, 1)], { name: 'Noodles with Chicken' }).kind, 'similar');            // two shared words, noun included          // the dish's own noun is shared
   assert.equal(acceptHit([hit('Lemon Pudding', 1, 1), hit('Roast Beef', 3, 4)], { name: 'Sunday Roast' }).hit.title, 'Roast Beef');
 });
 
@@ -57,4 +60,16 @@ test('what is searched for a receipt is its title and the start of its body', ()
   const d = receiptDoc({ title: 'Apple Pie', body: `Line one.\n\n${'x'.repeat(2000)}` });
   assert.ok(d.startsWith('Apple Pie. Line one. xxxx'));
   assert.ok(d.length <= 'Apple Pie. '.length + 700);
+});
+
+import { periodBlock } from '../src/book.js';
+
+test('a similar-dish receipt is labelled as not the same dish; an exact one is not', () => {
+  const book = { title: 'The Myrtle Reed Cook Book', author: 'Myrtle Reed', year: 1916, id: 37680 };
+  const similar = periodBlock({ book, title: 'CREAM OF CHICKEN AND NOODLES', text: 'Boil a fowl...', similar: true });
+  assert.match(similar, /A similar dish, as they wrote it in 1916/);
+  assert.match(similar, /Not the same dish/);
+  const exact = periodBlock({ book, title: 'PUMPKIN PIE', text: 'Stew the pumpkin...' });
+  assert.match(exact, /How they wrote it, in 1916/);
+  assert.doesNotMatch(exact, /Not the same dish|similar dish/i);
 });

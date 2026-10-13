@@ -135,7 +135,7 @@ const pageOf = (pages, id) => (pages instanceof Map ? (pages.get(id) ?? '') : ''
 const line = (label, id, pages, cls = '') => `<li${cls ? ` class="${cls}"` : ''}><a href="#${id}"><span class="t">${esc(label)}</span>${pages === false ? '' : `<span class="dots"></span><span class="pn">${pageOf(pages, id)}</span>`}</a></li>`;
 
 /** The verbatim period quotation, with its credit and (if there is one) the recipe layout, on its own facing page. */
-function periodBlock(period, modelLabel) {
+export function periodBlock(period, modelLabel) {
   const b = period.book;
   const heading = period.similar
     ? (b.year ? `A similar dish, as they wrote it in ${b.year}` : 'A similar dish, as it was written down')

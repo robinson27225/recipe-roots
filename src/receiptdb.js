@@ -77,11 +77,15 @@ export async function ingestReceipts(db, embedder, { books = PERIOD_BOOKS, cache
     await db.query('BEGIN');
     try {
       await db.query('DELETE FROM receipts WHERE book_id = $1', [String(book.id)]);
-      for (const [i, r] of receipts.entries()) {
+      // Batches, because over a network (Tiger Cloud) one round trip per receipt would take a long time.
+      for (let start = 0; start < receipts.length; start += 200) {
+        const part = receipts.slice(start, start + 200);
         await db.query(
           `INSERT INTO receipts (id, book_id, book_title, year, regions, title, body, doc, embedding)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::vector)`,
-          [`${book.id}:${i}`, String(book.id), book.title, book.year ?? null, book.regions, r.title, r.body, receiptDoc(r), toVector(vectors[i])],
+           SELECT id, $2, $3, $4, $5::text[], title, body, doc, embedding::vector
+             FROM unnest($1::text[], $6::text[], $7::text[], $8::text[], $9::text[]) AS t(id, title, body, doc, embedding)`,
+          [part.map((_, i) => `${book.id}:${start + i}`), String(book.id), book.title, book.year ?? null, book.regions,
+            part.map((r) => r.title), part.map((r) => r.body), part.map(receiptDoc), vectors.slice(start, start + 200).map(toVector)],
         );
       }
       await db.query('COMMIT');
@@ -111,7 +115,7 @@ export async function receiptInfo(db) {
 export async function searchReceipts(db, { words, vector, bookIds, bm25 = true, pool = 30, limit = 5 }) {
   if (!words.length || !bookIds.length) return [];
   const keyword = bm25
-    ? { rank: 'ORDER BY r.doc <@> $1::text', where: '' , param: words.join(' ') }
+    ? { rank: "ORDER BY r.doc <@> to_bm25query($1::text, 'receipts_bm25')", where: '' , param: words.join(' ') }
     : { rank: 'ORDER BY ts_rank_cd(r.tsv, to_tsquery(\'english\', $1)) DESC', where: 'AND r.tsv @@ to_tsquery(\'english\', $1)', param: words.join(' | ') };
   const { rows } = await db.query(
     `WITH kw AS (
@@ -131,6 +135,9 @@ export async function searchReceipts(db, { words, vector, bookIds, bm25 = true, 
   );
   return rows.map((r) => ({ ...r, bm_rank: r.bm_rank == null ? null : Number(r.bm_rank), vec_rank: r.vec_rank == null ? null : Number(r.vec_rank), rrf: Number(r.rrf) }));
 }
+
+// Words that say when or why a dish was made, not what it is.
+const GENERIC = new Set('dinner supper lunch luncheon breakfast dessert sunday holiday christmas easter special surprise delight treat dish meal favorite favourite family party summer winter quick easy simple best old fashioned homemade company'.split(' '));
 
 const letters = (t) => String(t).toLowerCase().normalize('NFD').replace(/\p{M}/gu, '').replace(/ae/g, 'a').replace(/oe/g, 'o').replace(/ue/g, 'u').replace(/[^a-z]/g, '');
 
@@ -170,11 +177,16 @@ export function acceptHit(hits, { name = '', top = 5, names = [name] } = {}) {
   const same = hits.filter((h) => h.vec_rank != null && h.vec_rank <= 3 && names.some((n) => variantSpelling(n, h.title)))
     .sort((a, b) => a.vec_rank - b.vec_rank)[0];
   if (same) return { hit: same, kind: 'same' };
-  // The dish's own noun must be in the title ("Noodles", "Roast"), not just a place or ingredient word ("Swedish",
-  // "Blueberry"): "Swedish Meatballs" is not "Turkey Stuffing (Swedish Style)".
+  // The title must share the dish's own words, not just a place, an ingredient or a mealtime ("Swedish", "Blueberry",
+  // "Dinner"): two of them when the name has two or more, and always its last one, the dish's noun.
   const stem = (w) => w.replace(/(?:es|s)$/, '');
-  const head = queryWords(String(name).replace(/\([^)]*\)/g, ' ')).at(-1);
-  const similar = head && hits.find((h) => h.bm_rank != null && h.vec_rank != null && h.bm_rank <= top && h.vec_rank <= top
-    && queryWords(h.title).some((w) => stem(w) === stem(head)));
+  const mine = queryWords(String(name).replace(/\([^)]*\)/g, ' ')).filter((w) => !GENERIC.has(w));
+  const head = mine.at(-1);
+  const need = Math.min(2, mine.length);
+  const similar = head && hits.find((h) => {
+    if (h.bm_rank == null || h.vec_rank == null || h.bm_rank > top || h.vec_rank > top) return false;
+    const theirs = new Set(queryWords(h.title).map(stem));
+    return theirs.has(stem(head)) && mine.filter((w) => theirs.has(stem(w))).length >= need;
+  });
   return similar ? { hit: similar, kind: 'similar' } : null;
 }
