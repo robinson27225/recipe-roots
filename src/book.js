@@ -46,6 +46,8 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .chapter-open .years { font-style: italic; color: #6b6556; margin-bottom: .25in; }
 .chapter-open .rule { height: 2px; width: .8in; background: var(--clay); margin: .2in 0 .3in; }
 .chapter-open figure { margin: .1in 0 0; } .chapter-open figcaption { font-size: 8.5pt; color: #6b6556; text-align: center; margin-top: .06in; }
+.chapter-open .fan { width: 66%; margin: 0 auto; }
+.chapter-open .kitchen { margin-top: .2in; }
 .chapter-text { break-after: page; }
 .fan { width: 100%; height: auto; display: block; }
 .people { list-style: none; padding: 0; margin: 0 0 .25in; font-size: 9.5pt; }
@@ -169,22 +171,13 @@ function recipe(r, headnote, story, modelLabel) {
 </section>`;
 }
 
-/**
- * How many kitchen-history notes fit under a chapter's opening text on the same page. A long cast of relatives or a
- * long intro leaves little room, and a note box that doesn't fit is pushed whole onto an otherwise empty page.
- * Estimated from the amount of text above it (about 90 characters of height per listed person).
- */
-export function historyLimit(peopleCount, intro) {
-  const weight = String(Array.isArray(intro) ? intro.join(' ') : intro ?? '').length + 90 * peopleCount;
-  return weight >= 1800 ? 1 : weight >= 1250 ? 2 : 3;
-}
-
 function chapter(c, n, people, photos, modelLabel) {
   const { story, recipes, text } = c;
   const place = story.originPlace && story.originPlace.toLowerCase().endsWith(story.from.label.toLowerCase()) ? story.originPlace : [story.originPlace, story.from.label].filter(Boolean).join(', ');
   const lead = [...story.people].sort((a, b) => a.gen - b.gen)[0];
   const fan = people ? fanChartSvg(pedigree(people, lead.id)) : '';
-  const history = kitchenHistory({ lo: story.lo - 10, hi: story.hi + 10, regionKeys: [story.from.key, story.to.key] }, historyLimit(story.people.length, text.intro));
+  const history = kitchenHistory({ lo: story.lo - 10, hi: story.hi + 10, regionKeys: [story.from.key, story.to.key] });
+  const kitchen = history.length ? `<div class="kitchen"><h4>In the kitchen, in those years</h4>${history.map((h) => `<p>${esc(h.text)}</p>`).join('')}</div>` : '';
   return `
 <section class="chapter-open">
   <div class="num">Chapter ${n}</div>
@@ -192,11 +185,11 @@ function chapter(c, n, people, photos, modelLabel) {
   <div class="years">sometime between ${span(story.lo, story.hi)} · from ${esc(place)}</div>
   <div class="rule"></div>
   ${fan ? `<figure>${fan}<figcaption>${esc(lead.name)}, ${esc(lead.relation)}: parents and grandparents</figcaption></figure>` : ''}
+  ${kitchen}
 </section>
 <section class="chapter-text">
   <ul class="people">${story.people.map((p) => `<li><span class="who-line">${photos?.get(p.id) ? `<img class="avatar" src="${photos.get(p.id).uri}" alt="">` : ''}<span>${esc(p.name)} <span class="small">${esc(lifespan(p))}</span></span></span><span class="rel">${esc(p.relation)}</span></li>`).join('')}</ul>
   ${paras(text.intro)}
-  ${history.length ? `<div class="kitchen"><h4>In the kitchen, in those years</h4>${history.map((h) => `<p>${esc(h.text)}</p>`).join('')}</div>` : ''}
 </section>
 ${recipes.map((r) => recipe(r, text.headnotes[r.id], story, modelLabel)).join('\n')}`;
 }

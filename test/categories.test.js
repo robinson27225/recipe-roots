@@ -67,12 +67,3 @@ test('a recipe can say what it makes; the book prints the card\'s own words, lab
   assert.equal(yieldLine(null), '');
   assert.equal(yieldLine('<b>'), '<span class="lab">Makes</span>&lt;b&gt;');
 });
-
-import { historyLimit } from '../src/book.js';
-
-test('a chapter with a long cast and a long intro shows fewer kitchen notes so the box stays on the page', () => {
-  assert.equal(historyLimit(3, 'x'.repeat(760)), 3);    // a few relatives, short intro: room for three
-  assert.equal(historyLimit(8, 'x'.repeat(900)), 2);    // eight relatives
-  assert.equal(historyLimit(10, 'x'.repeat(1000)), 1);
-  assert.equal(historyLimit(1, ['x'.repeat(300), 'y'.repeat(300)]), 3);
-});
