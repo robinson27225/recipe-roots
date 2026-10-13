@@ -121,6 +121,8 @@ node src/cli.js Wilder-1                                     # now picks dishes 
 ```
 Dishes are filtered by region and year in SQL, then ranked by similarity to what a family from that place and era might have cooked. Search is deliberately **exact, with no ANN index**: the filters leave a handful of rows, and ANN indexes lose recall under selective filters. If a homeland has no dishes in the pantry, the nearest cuisines are offered as clearly labelled **"stand-ins"**. That search is approximate (it ranked Denmark → Germany/Netherlands, Hungary → Poland/Germany well; Finland and Portugal poorly), and improves as the pantry grows. Without a database the tool uses a deterministic picker.
 
+**Tiger Cloud:** tested on a free Tiger Cloud service (PostgreSQL 18.6, pgvector 0.8.7, TimescaleDB 2.30): `ingest` loaded all 56 dishes and a build ran its semantic search there. Two connection details: Tiger's certificate is signed by a private CA that Node doesn't trust, so a plain `sslmode=require` URL fails with `self-signed certificate in certificate chain`. Add `&uselibpqcompat=true` (node-postgres then behaves like `psql`: encrypted, but the server's certificate isn't verified). To verify it as well, download the service's CA certificate from the Tiger console and use `sslmode=verify-full&sslrootcert=/path/to/ca.pem`. The URL carries a password: keep it in the environment, not in a file.
+
 ## Does restructuring a recipe get around copyright?
 Not as a safe assumption, and nothing here relies on it. In the US, a bare list of ingredients and a basic method are generally not protected by copyright, but the *expression* around them is: the descriptive wording, headnotes, stories, photographs, and a book's selection and arrangement. Re-laying-out someone's recipe is not a safe harbour: a layout that stays close to the original's wording is still derived from it, and our checker deliberately forces it to. So:
 - For **public-domain sources** (everything under "Period receipts") copyright isn't the issue at all, so the recipe layout is there for **usability**, and the original is kept for authenticity and credit.
@@ -133,7 +135,7 @@ Not as a safe assumption, and nothing here relies on it. In the US, a bare list 
 - **The guard can't verify meaning.** It blocks invented years, kin, names and some speculation, but a model can still connect dots loosely (e.g. tying a dish to Fannie Farmer). Read the book before you print it.
 - **Handwriting:** transcription was tested on clean cards (a typed card and a handwriting-style font), where every quantity was read correctly. Real handwriting is harder; use `--page-only` or review carefully.
 - **WikiTree:** profiles whose ancestry isn't public return "permission denied"; there is no login flow. WikiTree's recipe pages are behind bot protection and have no API, so they are not scraped; recipes come from your own scans. Searching ~830 ancestor bios across 7 public trees found recipe words in exactly one, so auto-discovery isn't practical.
-- Tested against local Postgres 17 + pgvector 0.8.7, not yet against Tiger Cloud (same SQL, `DATABASE_URL` only).
+- Tested against local Postgres 17 + pgvector 0.8.7 and a free Tiger Cloud service (PostgreSQL 18.6, pgvector 0.8.7); the Tiger run used encrypted but unverified TLS (see above) and was one ingest plus one build, not a load test.
 - Print-on-demand specs (bleed, spine, cover wrap) aren't implemented: the PDF is an interior at 6×9 in.
 
 ## Tests
