@@ -24,6 +24,7 @@ import { storySignals } from './stickers.js';
 import { structureReceipt } from './modernize.js';
 import { readCookbookFolder, matchTree, toFamilyRecipe } from './cookbook.js';
 import { renderReview } from './review.js';
+import { ingestReceipts, receiptInfo } from './receiptdb.js';
 import { collectScans, shrink, transcribeScan, ancestorFromPath } from './scan.js';
 import { DEFAULTS, modelAvailable } from './llm.js';
 
@@ -31,6 +32,9 @@ const USAGE = `Recipe Roots: turn a WikiTree ancestry into a family cookbook.
 
 Usage: recipe-roots <WikiTree-ID> [options]
        recipe-roots ingest [--database-url <url>]   load the recipe pantry into Postgres/pgvector
+       recipe-roots ingest-receipts [--database-url <url>]
+                                                    load every receipt from the public-domain cookbooks into Postgres for hybrid search
+                                                    (BM25 + vectors; BM25 needs Tiger Cloud's pg_textsearch, else built-in full-text search)
        recipe-roots ancestors <WikiTree-ID> [--relatives] [--filter text]
                                                     list people with the IDs to assign recipes to; --relatives adds
                                                     great-aunts, great-uncles and other siblings of ancestors
@@ -65,6 +69,8 @@ Usage: recipe-roots <WikiTree-ID> [options]
   --confirm-permission confirm you have each owner's permission to reproduce their photo/recipe in a book you may sell
   --no-structure      show period receipts only as the original paragraph (no recipe-layout version)
   --no-stickers       don't read WikiTree heritage/religion stickers (used only to pick period cookbooks)
+  --similar-period    when no cookbook has a family recipe's dish, offer the closest receipt, labelled as not the same dish
+                      (needs --database-url and a prior ingest-receipts)
   --no-period         skip the "How they wrote it" quotations from public-domain period cookbooks (Project Gutenberg)
   --no-pdf            write HTML + JSON only
 `;
@@ -78,7 +84,7 @@ const { values: v, positionals } = parseArgs({
     title: { type: 'string' }, 'family-recipes': { type: 'string' }, 'family-people': { type: 'string' },
     relatives: { type: 'boolean', default: false }, write: { type: 'string' }, ancestor: { type: 'string' }, tree: { type: 'string' }, filter: { type: 'string' }, contributor: { type: 'string' }, 'page-only': { type: 'boolean', default: false }, 'no-scan-page': { type: 'boolean', default: false }, 'recipes-file': { type: 'string', default: 'family-recipes.json' }, dedication: { type: 'string' }, out: { type: 'string' },
     'database-url': { type: 'string', default: process.env.DATABASE_URL }, 'embed-model': { type: 'string', default: EMBED_DEFAULTS.model },
-    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'my-photos': { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
+    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'my-photos': { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
   },
 });
 
@@ -215,6 +221,16 @@ if (id === 'scan') {
   process.exit(0);
 }
 
+if (id === 'ingest-receipts') {
+  if (!v['database-url']) { log('Set --database-url or DATABASE_URL (e.g. postgres://localhost:5433/recipe_roots).'); process.exit(1); }
+  const db = await connect(v['database-url']);
+  try {
+    const r = await ingestReceipts(db, embedder, { log });
+    log(`Loaded ${r.total} receipts from ${r.books.filter((b) => b.receipts).length} books with ${embedder.model}; keyword ranking: ${r.bm25 ? 'BM25 (pg_textsearch)' : 'built-in full-text search (pg_textsearch not available here)'}.`);
+  } catch (e) { log(`Error: ${e.message}`); process.exitCode = 1; } finally { await db.end(); }
+  process.exit(process.exitCode ?? 0);
+}
+
 if (id === 'ingest') {
   if (!v['database-url']) { log('Set --database-url or DATABASE_URL (e.g. postgres://localhost:5433/recipe_roots).'); process.exit(1); }
   const db = await connect(v['database-url']);
@@ -226,18 +242,24 @@ if (id === 'ingest') {
 }
 
 // Optional semantic recipe search. Any failure falls back to the built-in picker.
-let db = null;
+let db = null;           // the connection (also used for the receipt library)
+let pantryDb = null;     // set only when the dish pantry is loaded and usable
 if (v['database-url']) {
   try {
     db = await connect(v['database-url']);
-    const info = await pantryInfo(db);
-    if (!info) throw new Error('pantry not loaded; run `recipe-roots ingest` first');
-    if (info.model !== v['embed-model']) throw new Error(`pantry was embedded with ${info.model}, not ${v['embed-model']}; re-run ingest`);
-    log(`Semantic recipe search on: ${info.count} dishes in Postgres (${info.model}).`);
   } catch (e) {
-    log(`pgvector search unavailable (${e.message}); using the built-in recipe picker.`);
-    await db?.end().catch(() => {});
-    db = null;
+    log(`Database unavailable (${e.message}); using the built-in recipe picker.`);
+  }
+  if (db) {
+    try {
+      const info = await pantryInfo(db);
+      if (!info) throw new Error('pantry not loaded; run `recipe-roots ingest` first');
+      if (info.model !== v['embed-model']) throw new Error(`pantry was embedded with ${info.model}, not ${v['embed-model']}; re-run ingest`);
+      log(`Semantic recipe search on: ${info.count} dishes in Postgres (${info.model}).`);
+      pantryDb = db;
+    } catch (e) {
+      log(`pgvector dish search unavailable (${e.message}); using the built-in recipe picker.`);
+    }
   }
 }
 
@@ -276,7 +298,7 @@ try {
     const trial = new Set(used);
     let recipes;
     try {
-      recipes = db ? await pickRecipesSemantic(story, trial, { db, embedder }) : pickRecipes(story, trial);
+      recipes = pantryDb ? await pickRecipesSemantic(story, trial, { db: pantryDb, embedder }) : pickRecipes(story, trial);
     } catch (e) {
       log(`  semantic search failed (${e.message}); using the built-in picker for this chapter.`);
       recipes = pickRecipes(story, trial);
@@ -326,8 +348,15 @@ try {
     if (!familyRecipes.some((r) => r.ancestor === idv)) log(`  family-people: ${idv} has a note but no recipe in this book, so the note isn't printed.`);
   }
   if (!v['no-period'] && familyRecipes.length) {
-    const n = await attachFamilyPeriods(familyRecipes, { llm: llmCfg, offline, stickers: !v['no-stickers'], log });
-    if (n) log(`  ${n} family recipe(s) set beside the same dish as period cookbooks wrote it`);
+    let similar = null;
+    if (v['similar-period']) {
+      const info = db ? await receiptInfo(db) : null;
+      if (!info) log('  --similar-period needs --database-url and `recipe-roots ingest-receipts` first; skipping it.');
+      else if (info.model !== v['embed-model']) log(`  --similar-period: the receipt library was embedded with ${info.model}, not ${v['embed-model']}; re-run ingest-receipts.`);
+      else { similar = { db, embedder, bm25: info.bm25 }; log(`  similar-dish search on: ${info.count} receipts from ${info.books} books (${info.bm25 ? 'BM25 + vectors' : 'full-text + vectors'}).`); }
+    }
+    const n = await attachFamilyPeriods(familyRecipes, { llm: llmCfg, offline, stickers: !v['no-stickers'], similar, log });
+    if (n) log(`  ${n} family recipe(s) set beside a period cookbook receipt`);
   }
 
   // --- photos: your own family photos always; WikiTree's only through the gate ---

@@ -137,7 +137,11 @@ const line = (label, id, pages, cls = '') => `<li${cls ? ` class="${cls}"` : ''}
 /** The verbatim period quotation, with its credit and (if there is one) the recipe layout, on its own facing page. */
 function periodBlock(period, modelLabel) {
   const b = period.book;
-  return `<div class="period"><h4>${b.year ? `How they wrote it, in ${b.year}` : 'How it was written down'}</h4><blockquote>${esc(period.text)}</blockquote><cite>"${esc(period.title)}," <i>${esc(b.title)}</i>, ${esc(b.author)}${b.note ? ` (${esc(b.note)})` : ''}${b.year ? `, ${b.year}` : ''}. ${b.source === 'archive' ? `Internet Archive, ${esc(b.id)} (machine-read scan; small errors are possible)` : `Project Gutenberg #${esc(b.id)}`}; in the public domain in the United States.</cite>${structuredBlock(period.structured, modelLabel)}</div>`;
+  const heading = period.similar
+    ? (b.year ? `A similar dish, as they wrote it in ${b.year}` : 'A similar dish, as it was written down')
+    : (b.year ? `How they wrote it, in ${b.year}` : 'How it was written down');
+  const similarNote = period.similar ? '<p class="how">Not the same dish: the closest receipt this cookbook has to the recipe on the previous page, found by searching its receipts by keyword and by meaning.</p>' : '';
+  return `<div class="period"><h4>${heading}</h4>${similarNote}<blockquote>${esc(period.text)}</blockquote><cite>"${esc(period.title)}," <i>${esc(b.title)}</i>, ${esc(b.author)}${b.note ? ` (${esc(b.note)})` : ''}${b.year ? `, ${b.year}` : ''}. ${b.source === 'archive' ? `Internet Archive, ${esc(b.id)} (machine-read scan; small errors are possible)` : `Project Gutenberg #${esc(b.id)}`}; in the public domain in the United States.</cite>${structuredBlock(period.structured, modelLabel)}</div>`;
 }
 
 /** The receipt in a standard layout, set under the verbatim original, with an honest note on how it was made. */

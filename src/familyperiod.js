@@ -2,7 +2,9 @@
 // region wrote it up, using the same strict title matching as the chapter dishes. A cook's years and the places they
 // were born and died stand in for a chapter's window and route. Nothing is invented: no match, no page.
 import { regionOf, REGIONS } from './regions.js';
-import { findPeriodReceipts } from './period.js';
+import { findPeriodReceipts, booksFor, excerpt } from './period.js';
+import PERIOD_BOOKS from '../data/period-books.js';
+import { queryWords, searchReceipts, acceptHit } from './receiptdb.js';
 import { structureReceipt } from './modernize.js';
 import { fetchStickers, stickerSignals } from './stickers.js';
 
@@ -36,7 +38,24 @@ export function storyFromCook(person) {
  * Attach `period` (the quotation, and its recipe layout where one can be made) to every family recipe that has a
  * readable cook and a matching dish in the cookbooks of their time and place.
  */
-export async function attachFamilyPeriods(recipes, { llm, offline = false, stickers = true, log = () => {} } = {}) {
+/**
+ * No receipt in the era's books has this dish's name: look by hybrid search (keywords and meaning). A receipt that is
+ * the same dish under another spelling is used as the dish itself; otherwise the closest one is accepted only if both
+ * rankings agree, and is marked `similar`. Returns a period-shaped result, or null.
+ */
+export async function similarReceipt(recipe, name, story, { db, embedder, bm25 = true }) {
+  const bookIds = booksFor(story).map((b) => b.id);
+  if (!bookIds.length) return null;
+  const [vector] = await embedder.embed([`${name}. ${recipe.ingredients.slice(0, 10).join('; ')}`]);
+  // Keywords come from the dish's name alone: ingredient words match too many unrelated receipts. The vector
+  // search sees the ingredients as well.
+  const hits = await searchReceipts(db, { words: queryWords(name), vector, bookIds, bm25 });
+  const found = acceptHit(hits, { name });
+  const book = found && PERIOD_BOOKS.find((b) => String(b.id) === found.hit.book_id);
+  return book ? { book, title: found.hit.title, text: excerpt(found.hit.body), similar: found.kind === 'similar' } : null;
+}
+
+export async function attachFamilyPeriods(recipes, { llm, offline = false, stickers = true, similar = null, log = () => {} } = {}) {
   let attached = 0;
   for (const r of recipes) {
     if (!r.person || r.pageOnly) continue;
@@ -55,6 +74,7 @@ export async function attachFamilyPeriods(recipes, { llm, offline = false, stick
       hit = (await findPeriodReceipts(story, [dish], { log })).get(dish.id);
       if (hit) break;
     }
+    if (!hit && similar) { try { hit = await similarReceipt(r, name, story, similar); } catch (e) { log(`  similar-dish search failed for "${r.title}" (${e.message})`); } }
     if (!hit) continue;
     r.period = { ...hit, structured: await structureReceipt(hit.text, { llm, offline, log }) };
     attached++;
