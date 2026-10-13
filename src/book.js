@@ -4,6 +4,12 @@ import { pedigree, fanChartSvg } from './fan.js';
 import { regionOf } from './regions.js';
 import { cookProfile, sortCooks } from './cook.js';
 import { categorize, groupByCategory, CATEGORIES } from './categories.js';
+import { readFileSync } from 'node:fs';
+
+// The WikiTree heart in pastel yellow (tools/recolor-logo.swift), embedded so the PDF is self-contained.
+const HEART = (() => {
+  try { return `data:image/png;base64,${readFileSync(new URL('../assets/wikitree-heart-yellow.png', import.meta.url)).toString('base64')}`; } catch { return null; }
+})();
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const paras = (t) => t.split(/\n{2,}/).map((p) => `<p>${esc(p.trim())}</p>`).join('\n');
@@ -29,6 +35,7 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .cover h1 { color: var(--paper); font-size: 34pt; letter-spacing: .01em; }
 .cover .sub { margin-top: .5in; font-size: 12pt; font-style: italic; opacity: .9; }
 .cover .orn { font-size: 20pt; color: #d9a074; margin: .35in 0; }
+.cover .mark { width: 1.1in; height: auto; margin: .4in 0 .1in; }
 .cover .by { position: absolute; bottom: .6in; font-size: 8.5pt; letter-spacing: .18em; text-transform: uppercase; opacity: .7; }
 .front { page: plain; break-after: page; display: flex; flex-direction: column; justify-content: center; min-height: 6.2in; }
 .front.center { text-align: center; }
@@ -49,6 +56,8 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .chapter-open .fan { width: 66%; margin: 0 auto; }
 .chapter-open .kitchen { margin-top: .2in; }
 .chapter-text { break-after: page; }
+a.wt { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
+.wtid { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .fan { width: 100%; height: auto; display: block; }
 .people { list-style: none; padding: 0; margin: 0 0 .25in; font-size: 9.5pt; }
 .people li { padding: .06in 0; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: .2in; }
@@ -120,7 +129,8 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .cook-head .portrait { width: 1.25in; } .cook-head .portrait img { max-height: 1.6in; }
 .cook-head .life { margin: 0 0 .06in; font-size: 10.5pt; }
 .cook-open .story { margin: .12in 0; }
-.cook-fan { width: 64%; margin: .04in auto 0; } 
+.cook-fan { width: 64%; margin: .04in auto 0; }
+.cook-open.has-photo .cook-fan { width: 50%; } 
 .cook-open .kitchen { margin-top: .12in; font-size: 9pt; }
 .cook-recipes { margin-top: .12in; }
 .cat { font-size: 7.5pt; letter-spacing: .16em; text-transform: uppercase; color: #8a8372; margin: -.08in 0 .1in; }
@@ -157,12 +167,12 @@ function structuredBlock(s, modelLabel) {
     ${s.notes?.length ? `<p class="gaps"><b>Note:</b> ${s.notes.map(esc).join(' ')}</p>` : ''}</div>`;
 }
 
-function recipe(r, headnote, story, modelLabel) {
+function recipe(r, headnote, story, modelLabel, anchor) {
   const where = r.side === 'origin' ? story.from.label : story.to.label;
   const kicker = r.neighbour ? `A stand-in from ${regionLabel(r.region)}`
     : r.region === 'usa-general' ? 'An American classic' : `A traditional dish of ${where}`;
   return `
-<section class="recipe">
+<section class="recipe">${anchor ? mk(anchor) : ''}
   <div class="side">${esc(kicker)}</div>
   <h3>${esc(r.name)}</h3>
   <p class="head">${esc(headnote)}</p>
@@ -192,13 +202,19 @@ function chapter(c, n, people, photos, modelLabel) {
   ${kitchen}
 </section>
 <section class="chapter-text">
-  <ul class="people">${story.people.map((p) => `<li><span class="who-line">${photos?.get(p.id) ? `<img class="avatar" src="${photos.get(p.id).uri}" alt="">` : ''}<span>${esc(p.name)} <span class="small">${esc(lifespan(p))}</span></span></span><span class="rel">${esc(p.relation)}</span></li>`).join('')}</ul>
+  <ul class="people">${story.people.map((p) => `<li><span class="who-line">${photos?.get(p.id) ? `<img class="avatar" src="${photos.get(p.id).uri}" alt="">` : ''}<span>${p.wikiTreeId ? wtLink(esc(p.name), p.wikiTreeId) : esc(p.name)} <span class="small">${esc(lifespan(p))}${p.wikiTreeId ? ` · ${wtId(p.wikiTreeId)}` : ''}</span></span></span><span class="rel">${esc(p.relation)}</span></li>`).join('')}</ul>
   ${paras(text.intro)}
 </section>
-${recipes.map((r) => recipe(r, text.headnotes[r.id], story, modelLabel)).join('\n')}`;
+${recipes.map((r, j) => recipe(r, text.headnotes[r.id], story, modelLabel, `c${n}r${j + 1}`)).join('\n')}`;
 }
 
 /** A family recipe page. With a cook page before it the cook's portrait and fan chart live there, so this page is just the recipe. */
+/** A live link to a person's WikiTree profile (the PDF keeps it clickable). */
+const WIKITREE = 'https://www.wikitree.com/wiki/';
+export const wtUrl = (id) => `${WIKITREE}${encodeURIComponent(id)}`;
+export const wtLink = (text, id) => `<a class="wt" href="${esc(wtUrl(id))}">${text}</a>`;
+export const wtId = (id) => `<span class="wtid">${wtLink(esc(id), id)}</span>`;
+
 /** "Makes 7 ramekins": print what the card says, adding a label only when it doesn't already start with one. */
 export function yieldLine(y) {
   const text = String(y ?? '').trim();
@@ -207,7 +223,7 @@ export function yieldLine(y) {
 }
 
 function familyRecipe(r, { id, profiled, modelLabel }) {
-  const who = profiled ? '' : `<p class="who"><span class="lab">${r.direct || !r.person ? 'Ancestor' : 'Relative'}</span>${esc(r.ancestorName)}${r.relation ? `, ${esc(r.relation)}` : ''} <span class="small">· wikitree.com/wiki/${esc(r.ancestor)}</span></p>`;
+  const who = profiled ? '' : `<p class="who"><span class="lab">${r.direct || !r.person ? 'Ancestor' : 'Relative'}</span>${esc(r.ancestorName)}${r.relation ? `, ${esc(r.relation)}` : ''} <span class="small">· ${wtId(r.ancestor)}</span></p>`;
   const head = `${mk(id)}
   <div class="side">${r.pageOnly ? 'In their own hand' : profiled ? `From the kitchen of ${esc(r.ancestorName)}` : 'From the family kitchen'}</div>
   <h3>${esc(r.title)}</h3>
@@ -240,14 +256,14 @@ function cookPage(cook, id, { people, photos }) {
   const { profile } = cook;
   const photo = photos?.get(cook.person.Id);
   const note = cook.photoNote ? `${esc(cook.photoNote)}<br>` : '';
-  const portrait = photo ? `<figure class="portrait"><img src="${photo.uri}" alt="${esc(profile.name)}"><figcaption>${photo.caption ? `${esc(photo.caption)}<br>` : ''}${note}${photo.credit ? `Photo: ${esc(photo.credit)}` : `Photo: WikiTree profile ${esc(photo.name)}`}</figcaption></figure>` : '';
+  const portrait = photo ? `<figure class="portrait"><img src="${photo.uri}" alt="${esc(profile.name)}"><figcaption>${photo.caption ? `${esc(photo.caption)}<br>` : ''}${note}${photo.credit ? `Photo: ${esc(photo.credit)}` : `Photo: WikiTree ${photo.pageUrl ? `<a class="wt" href="https://www.wikitree.com${esc(photo.pageUrl)}">photo page</a>, ` : ''}profile ${wtId(photo.name)}`}</figcaption></figure>` : '';
   const fan = people ? fanChartSvg(pedigree(people, cook.person.Id)) : '';
   const move = profile.chapter ? `<p class="small">Their move from ${esc(profile.chapter.from)} to ${esc(profile.chapter.to)} is in <a href="#ch${profile.chapter.number}">Chapter ${profile.chapter.number}</a>.</p>` : '';
   return `
-<section class="cook-open">${mk(id)}
+<section class="cook-open${photo ? ' has-photo' : ''}">${mk(id)}
   <div class="side">From the kitchen of</div>
-  <h2>${esc(profile.name)}</h2>
-  <div class="years">${esc([profile.years, profile.relation].filter(Boolean).join(' · '))}</div>
+  <h2>${cook.person?.Name ? wtLink(esc(profile.name), cook.person.Name) : esc(profile.name)}</h2>
+  <div class="years">${esc([profile.years, profile.relation].filter(Boolean).join(' · '))}${cook.person?.Name ? ` · ${wtId(cook.person.Name)}` : ''}</div>
   <div class="cook-head">${portrait}<div>${profile.life ? `<p class="life">${esc(profile.life)}</p>` : ''}${move}</div></div>
   ${profile.story ? `<div class="story">${esc(profile.story)}</div>` : ''}
   ${fan ? `<figure class="cook-fan">${fan}</figure>` : ''}
@@ -291,17 +307,30 @@ ${ordered.map((c) => `${c.person ? cookPage(c, c.anchor, { people, photos }) : '
 }
 
 /** The two indices: recipes by category, and recipes by cook. */
-function indexPages(cooks, pages) {
-  const all = cooks.flatMap((c) => c.recipes.map((r) => ({ r, cook: c })));
-  const cookOf = new Map(all.map(({ r, cook }) => [r, cook]));
-  const byCategory = groupByCategory(all.map(({ r }) => r));
-  return `
-<section class="ix">${mk('ix1')}<h2>Recipes by category</h2>
-  ${byCategory.map((g) => `<h3>${esc(g.category)}</h3><ul class="ixl">${g.recipes.map((r) => line(`${r.title}, ${cookOf.get(r).name}`, r.anchor, pages)).join('')}</ul>`).join('')}
-</section>
+/**
+ * Every recipe in the book, filed by category: the chapters' traditional dishes and the family's own. A family
+ * recipe is credited to its cook, a chapter dish to its chapter. `cooks` (the family kitchen) may be empty.
+ */
+export function chapterEntries(chapters) {
+  return chapters.flatMap((c, i) => c.recipes.map((r, j) => ({
+    title: r.name, category: categorize({ title: r.name, ingredients: r.ingredients }), anchor: `c${i + 1}r${j + 1}`, by: `Chapter ${i + 1}`,
+  })));
+}
+
+function indexPages(cooks, chapterRecipes, pages) {
+  const entries = [
+    ...chapterRecipes,
+    ...cooks.flatMap((c) => c.recipes.map((r) => ({ title: r.title, category: r.category, anchor: r.anchor, by: c.name }))),
+  ];
+  const byCategory = groupByCategory(entries);
+  const byCook = cooks.length ? `
 <section class="ix">${mk('ix2')}<h2>Recipes by cook</h2>
   ${cooks.map((c) => `<h3>${esc(c.name)}${c.profile?.years ? ` (${esc(c.profile.years)})` : ''}</h3><ul class="ixl">${c.recipes.map((r) => line(r.title, r.anchor, pages)).join('')}</ul>`).join('')}
-</section>`;
+</section>` : '';
+  return `
+<section class="ix">${mk('ix1')}<h2>Recipes by category</h2>
+  ${byCategory.map((g) => `<h3>${esc(g.category)}</h3><ul class="ixl">${g.recipes.map((r) => line(`${r.title}, ${r.by}`, r.anchor, pages)).join('')}</ul>`).join('')}
+</section>${byCook}`;
 }
 
 /** Say only what is true about how each chapter's text was produced. */
@@ -328,6 +357,8 @@ export function renderBook({ title, subtitle, dedication, chapters, rootId, mode
   const hasFamily = familyRecipes.length > 0;
   const family = hasFamily ? familyPart(familyRecipes, { people, chapters, photos, peopleNotes, modelLabel }) : null;
 
+  const chapterRecipes = chapterEntries(chapters);
+
   // Contents: where to find things, with page numbers once a first render has told us where they landed.
   const toc = [
     { head: 'Where they came from' },
@@ -335,7 +366,8 @@ export function renderBook({ title, subtitle, dedication, chapters, rootId, mode
     ...chapters.map((c, i) => ({ label: `Chapter ${i + 1}: ${cap(c.story.from.label)} to ${c.story.to.label}`, id: `ch${i + 1}` })),
     ...(family ? [{ head: 'The family kitchen' }, { label: 'About this part', id: 'p2' },
       ...family.cooks.map((c) => ({ label: `${c.name}${c.relation ? `, ${c.relation}` : ''}${c.profile?.years ? ` (${c.profile.years})` : ''}`, id: c.person ? c.anchor : c.recipes[0].anchor, level: 1 })),
-      { head: 'Finding a recipe' }, { label: 'Recipes by category', id: 'ix1' }, { label: 'Recipes by cook', id: 'ix2' }] : []),
+      ] : []),
+    ...(chapterRecipes.length || family ? [{ head: 'Finding a recipe' }, { label: 'Recipes by category', id: 'ix1' }, ...(family ? [{ label: 'Recipes by cook', id: 'ix2' }] : [])] : []),
     { head: 'The people' }, { label: 'The people in this book', id: 'pp' },
   ];
   const contents = toc.map((t) => (t.head ? `<li class="head"><span class="t">${esc(t.head)}</span></li>` : line(t.label, t.id, pages, t.level ? `l${t.level}` : ''))).join('');
@@ -344,14 +376,14 @@ export function renderBook({ title, subtitle, dedication, chapters, rootId, mode
 <html lang="en"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${CSS}</style></head><body>
 <section class="cover">
   <h1>${esc(title)}</h1>
-  <div class="orn">❦</div>
+  ${HEART ? `<img class="mark" src="${HEART}" alt="WikiTree heart logo">` : '<div class="orn">❦</div>'}
   <div class="sub">${esc(subtitle)}</div>
   <div class="by">Recipe Roots</div>
 </section>
 ${dedication ? `<section class="front center"><p class="dedication">${esc(dedication)}</p></section>` : ''}
 <section class="front">
   <h2>About this book</h2>
-  <p>Every chapter here begins with real records. The people, places and years come from public WikiTree profiles, starting from <b>${esc(rootId)}</b>. Where records show someone born in one place and later living in another, this book follows that move.</p>
+  <p>Every chapter here begins with real records. The people, places and years come from public WikiTree profiles, starting from <b>${wtLink(esc(rootId), rootId)}</b>. Where records show someone born in one place and later living in another, this book follows that move.</p>
   <p>The dishes in the chapters are traditional foods from those places and eras, chosen from a curated collection. <b>They are not recorded family recipes.</b> They are the kind of meals families like these might have cooked, and a way to taste the world they left and the one they came to.${hasFamily ? ' <i>The family kitchen</i> is different: those recipes were written down by relatives, and appear here exactly as they were shared, each introduced by a page about the person who cooked it.' : ''}</p>
   <p>Dates of moves are approximate windows estimated from birth, death and children's birthplaces.</p>
   <p>${provenance(chapters, modelLabel)}</p>
@@ -368,11 +400,13 @@ ${timeline.length ? `<section class="timeline">${mk('tl')}
   <p class="small" style="margin:.12in 0 0">General background on food history, not facts about any one family.</p>
 </section>` : ''}
 ${chapters.map((c, i) => chapter(c, i + 1, people, photos, modelLabel).replace('<section class="chapter-open">', `<section class="chapter-open">${mk(`ch${i + 1}`)}`)).join('\n')}
-${family ? `${family.html}\n${indexPages(family.cooks, pages)}` : ''}
+${family ? family.html : ''}
+${chapterRecipes.length || family ? indexPages(family?.cooks ?? [], chapterRecipes, pages) : ''}
 <section class="index">${mk('pp')}
   <h2>The people in this book</h2>
-  <ul>${index.map((p) => `<li>${esc(p.name)}, ${esc(p.relation)} ${esc(lifespan(p) && `(${lifespan(p)})`)}<br><span class="small">wikitree.com/wiki/${esc(p.wikiTreeId)}</span></li>`).join('')}</ul>
-  <p class="small" style="margin-top:.3in">Genealogical data from WikiTree, the free shared family tree. Recipe pantry and book generator: Recipe Roots, open source.</p>
+  <ul>${index.map((p) => `<li>${wtLink(esc(p.name), p.wikiTreeId)}, ${esc(p.relation)} ${esc(lifespan(p) && `(${lifespan(p)})`)}<br><span class="small">${wtLink(`wikitree.com/wiki/${esc(p.wikiTreeId)}`, p.wikiTreeId)}</span></li>`).join('')}</ul>
+  <p class="small" style="margin-top:.3in">Relationships are stated from the profile of ${wtLink(esc(rootId), rootId)}: "grandmother" means that person's grandmother, and so on. Names and IDs link to the people's WikiTree profiles.</p>
+  <p class="small">Genealogical data from WikiTree, the free shared family tree. Recipe pantry and book generator: Recipe Roots, open source.</p>
 </section>
 </body></html>`;
 }

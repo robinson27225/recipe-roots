@@ -84,7 +84,8 @@ test('the book shows the portrait with its credit, in the chapter list and besid
   const family = [{ title: 'Soup', ancestor: 'Murphy-11', person: people.get(4), ancestorName: 'Patrick Murphy', relation: 'grandfather', direct: true, ingredients: ['1 potato'], directions: ['Boil.'], story: null, contributor: 'Jo', people, photoNote: 'Photo comment: family collection' }];
   const html = renderBook({ title: 'T', subtitle: 'S', rootId: 'Sample-1', chapters, people, familyRecipes: family, photos });
   assert.match(html, /class="avatar" src="data:image\/jpeg;base64,AAAA"/);
-  assert.match(html, /<figcaption>At the farm · 1948<br>Photo comment: family collection<br>Photo: WikiTree profile Murphy-11<\/figcaption>/);
+  assert.match(html, /<figcaption>At the farm · 1948<br>Photo comment: family collection<br>Photo: WikiTree profile <span class="wtid"><a class="wt" href="https:\/\/www\.wikitree\.com\/wiki\/Murphy-11">Murphy-11<\/a><\/span><\/figcaption>/);
+  assert.match(html, /<a class="wt" href="https:\/\/www\.wikitree\.com\/wiki\/Murphy-11">/);   // names link to their profiles
   assert.match(html, /photos belong to the people who uploaded them/);
   const none = renderBook({ title: 'T', subtitle: 'S', rootId: 'Sample-1', chapters, people, familyRecipes: family });
   assert.doesNotMatch(none, /class="avatar"|class="portrait"|uploaded them/);

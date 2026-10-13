@@ -73,3 +73,27 @@ test('a similar-dish receipt is labelled as not the same dish; an exact one is n
   assert.match(exact, /How they wrote it, in 1916/);
   assert.doesNotMatch(exact, /Not the same dish|similar dish/i);
 });
+
+import { wtUrl, wtLink, wtId } from '../src/book.js';
+
+test('people are linked to their WikiTree profiles, with the ID shown and escaped', () => {
+  assert.equal(wtUrl('Budd-1260'), 'https://www.wikitree.com/wiki/Budd-1260');
+  assert.equal(wtLink('Leona', 'Budd-1260'), '<a class="wt" href="https://www.wikitree.com/wiki/Budd-1260">Leona</a>');
+  assert.match(wtId('Budd-1260'), /<span class="wtid"><a class="wt" href="[^"]+Budd-1260">Budd-1260<\/a><\/span>/);
+  assert.ok(!wtLink('x', 'a"b<c').includes('"b<c'));      // an odd ID can't break out of the attribute
+});
+
+import { chapterEntries } from '../src/book.js';
+
+test("the chapters' traditional dishes are filed by category too, credited to their chapter", () => {
+  const got = chapterEntries([
+    { recipes: [{ name: 'Chicken and Noodles', ingredients: ['1 chicken'] }, { name: 'Double-Crust Apple Pie', ingredients: ['apples'] }] },
+    { recipes: [{ name: 'Buckwheat Pancakes', ingredients: ['flour'] }] },
+  ]);
+  assert.deepEqual(got.map((e) => [e.title, e.anchor, e.by]), [
+    ['Chicken and Noodles', 'c1r1', 'Chapter 1'], ['Double-Crust Apple Pie', 'c1r2', 'Chapter 1'], ['Buckwheat Pancakes', 'c2r1', 'Chapter 2'],
+  ]);
+  assert.equal(got[0].category, 'Main Dishes');
+  assert.equal(got[1].category, 'Cakes, Pies & Desserts');
+  assert.equal(got[2].category, 'Breads & Breakfast');
+});

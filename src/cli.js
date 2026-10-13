@@ -63,6 +63,8 @@ Usage: recipe-roots <WikiTree-ID> [options]
   --out <dir>         output folder (default out/<WikiTree-ID>)
   --my-photos <dir>   your own family photos, named for the person (Smith-1234.jpg); never restricted
   --wikitree-photos   also use WikiTree profile photos. Needs --me, --honor-code-signed and --confirm-permission
+  --wikitree-photos-for <IDs>  with --wikitree-photos: only for these people (comma-separated WikiTree IDs), for when you
+                      have permission for some photos and not others
   --me <ID>           your WikiTree ID (or RR_ME). Photos and recipes from WikiTree are for Wiki Genealogists (Honor Code
                       signatories) who have the owners' permission; see README. Off by default.
   --honor-code-signed attest that you are a Wiki Genealogist (Honor Code signatory); it can't be checked automatically
@@ -84,7 +86,7 @@ const { values: v, positionals } = parseArgs({
     title: { type: 'string' }, 'family-recipes': { type: 'string' }, 'family-people': { type: 'string' },
     relatives: { type: 'boolean', default: false }, write: { type: 'string' }, ancestor: { type: 'string' }, tree: { type: 'string' }, filter: { type: 'string' }, contributor: { type: 'string' }, 'page-only': { type: 'boolean', default: false }, 'no-scan-page': { type: 'boolean', default: false }, 'recipes-file': { type: 'string', default: 'family-recipes.json' }, dedication: { type: 'string' }, out: { type: 'string' },
     'database-url': { type: 'string', default: process.env.DATABASE_URL }, 'embed-model': { type: 'string', default: EMBED_DEFAULTS.model },
-    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'my-photos': { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
+    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'wikitree-photos-for': { type: 'string' }, 'my-photos': { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
   },
 });
 
@@ -367,7 +369,8 @@ try {
     log(`  ${photos.size} of your own family photo(s) used.`);
   }
   if (v['wikitree-photos'] && gate?.allowed) {
-    const fetched = await fetchPhotos(wanted.filter((p) => !photos.has(p.Id)));
+    const only = v['wikitree-photos-for'] ? new Set(v['wikitree-photos-for'].split(',').map((x) => x.trim()).filter(Boolean)) : null;
+    const fetched = await fetchPhotos(wanted.filter((p) => !photos.has(p.Id) && (!only || only.has(p.Name))));
     for (const [pid, ph] of fetched) photos.set(pid, ph);
     log(`  ${fetched.size} WikiTree profile photo(s) used. They belong to their uploaders: see permissions.md.`);
   }

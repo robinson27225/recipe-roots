@@ -11,6 +11,11 @@ test('markers are mapped to the page they appear on; the first appearance wins; 
   assert.equal(extractMarkerPages([]).size, 0);
 });
 
+test('markers for chapter dishes (letters and digits mixed, like c2r3) are read too', () => {
+  const pages = extractMarkerPages(['[[c1r1]] one', 'x [[c2r3]] y [[ix1]]']);
+  assert.deepEqual([...pages], [['c1r1', 1], ['c2r3', 2], ['ix1', 2]]);
+});
+
 test('a PDF that cannot be read gives no page numbers rather than an error', async () => {
   assert.equal((await pagesForMarkers('/nonexistent/file.pdf')).size, 0);
 });

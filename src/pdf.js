@@ -33,7 +33,7 @@ export async function htmlToPdf(htmlFile, pdfFile) {
 // number carries an invisible marker ([[r12]], in 1px text the colour of the paper). After the first render we read
 // which page each marker landed on and put the numbers into the second render. The numbers match the footers
 // because both count from the cover as page 1.
-const MARKER = /\[\[([a-z]+\d*)\]\]/g;
+const MARKER = /\[\[([a-z][a-z0-9]*)\]\]/g;
 
 /** Map of marker id -> page number (1-based), from the text of each page. The first appearance wins. */
 export function extractMarkerPages(pageTexts) {

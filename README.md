@@ -9,7 +9,7 @@ node src/cli.js Wilder-1 --title "The Wilder Table" --dedication "For Grandma"
 ```
 
 Needs Node 20+ and Chrome/Chromium for the PDF (`CHROME_PATH` if not found). The only dependency is `pg`, and only used with a database.
-Demo books (PDFs in [docs/](docs)): [one built from the author's own WikiTree tree](docs/demo-book.pdf), with one scanned handwritten recipe (`node src/cli.js Robinson-27225 --family-recipes examples/robinson-demo/family-recipes.json --title "The Robinson Table"`), and [a fully fictional one](docs/demo-fictional.pdf) with ten recipes and eight cooks (`node examples/fictional-demo.mjs`).
+Demo books (PDFs in [docs/](docs)): [one built from the author's own WikiTree tree](docs/demo-book.pdf), with one scanned handwritten recipe and one WikiTree photo, the author's own upload (`node src/cli.js Robinson-27225 --family-recipes examples/robinson-demo/family-recipes.json --title "The Robinson Table" --wikitree-photos --wikitree-photos-for Budd-1260 --me Robinson-27225 --honor-code-signed --confirm-permission`), and [a fully fictional one](docs/demo-fictional.pdf) with ten recipes and eight cooks (`node examples/fictional-demo.mjs`).
 
 ## What goes in the book
 - **Chapters from real migrations** found in the tree: a fan chart of the lead ancestor, who moved where and when (as an honest window), a short "in the kitchen, in those years" note, and three traditional dishes.
@@ -74,6 +74,7 @@ node src/cli.js Smith-123                                   # facts + curated di
 node src/cli.js Smith-123 --my-photos ./family-photos       # + your own photos (never restricted)
 node src/cli.js Smith-123 --family-recipes mine.json        # + your own recipes (never restricted)
 node src/cli.js Smith-123 --wikitree-photos --me Smith-123 --honor-code-signed --confirm-permission   # + WikiTree photos
+node src/cli.js Smith-123 --wikitree-photos --wikitree-photos-for Smith-5,Smith-9 --me ...   # only these people's photos
 ```
 When any third-party item is used, the build writes **`permissions.md`** next to the book: each photo and recipe, its owner, and where it came from, so you know exactly whom to ask before you sell.
 
