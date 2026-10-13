@@ -3,10 +3,15 @@
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /** recipes: the raw entries of family-recipes.json. Returns the html; image paths are relative to that file. */
+const FR = { '¼': '1/4', '½': '1/2', '¾': '3/4', '⅓': '1/3', '⅔': '2/3', '⅛': '1/8' };
+const tokens = (line) => new Set(String(line).replace(/[¼½¾⅓⅔⅛]/g, (c) => ` ${FR[c]} `).match(/\d+(?:[./]\d+)?/g) ?? []);
+
 export function renderReview(recipes, { title = 'Check your scanned recipes' } = {}) {
   const todo = recipes.filter((r) => r.transcribedByAI && !r.reviewed);
   const card = (r) => {
     const check = r.check && (r.check.onlyInTranscript?.length || r.check.onlyInSecondReading?.length);
+    const flagged = new Set(r.check?.onlyInTranscript ?? []);          // numbers the transcript has that the second reading doesn't agree with
+    const li = (x) => `<li${[...tokens(x)].some((n) => flagged.has(n)) ? ' class="chk"' : ''}>${esc(x)}</li>`;
     return `<section class="card${r.transcribedByAI && !r.reviewed ? ' todo' : ''}">
   <div class="scan">${r.image ? `<img src="${esc(r.image)}" alt="Scan of ${esc(r.title)}">` : '<p class="none">No scan.</p>'}</div>
   <div class="text">
@@ -14,8 +19,8 @@ export function renderReview(recipes, { title = 'Check your scanned recipes' } =
     <p class="meta">${esc(r.ancestor)}${r.category ? ` · ${esc(r.category)}` : ''}${r.transcribedByAI ? (r.reviewed ? ' · <b class="ok">reviewed</b>' : ' · <b class="no">not yet reviewed</b>') : ''}</p>
     ${check ? `<p class="flag">Check the amounts: the two readings of the scan disagreed on [${esc([...(r.check.onlyInTranscript ?? []), ...(r.check.onlyInSecondReading ?? [])].join(', '))}].</p>` : ''}
     ${r.pageOnly ? '<p class="none">Printed as a page, exactly as scanned. Nothing was transcribed.</p>' : `
-    <h3>Ingredients</h3><ul>${(r.ingredients ?? []).map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-    <h3>Directions</h3><ol>${(r.directions ?? []).map((x) => `<li>${esc(x)}</li>`).join('')}</ol>
+    <h3>Ingredients</h3><ul>${(r.ingredients ?? []).map(li).join('')}</ul>
+    <h3>Directions</h3><ol>${(r.directions ?? []).map(li).join('')}</ol>
     ${r.story ? `<h3>Notes</h3><p>${esc(r.story)}</p>` : ''}`}
   </div>
 </section>`;
@@ -29,6 +34,7 @@ export function renderReview(recipes, { title = 'Check your scanned recipes' } =
   img { max-width: 100%; border: 1px solid #ccc; background: #fff }
   h2 { margin: 0 } h3 { font: small-caps 600 .95rem sans-serif; letter-spacing: .08em; margin: 1rem 0 .2rem; color: #355 }
   .meta { color: #666; margin: .1rem 0 } .flag { background: #fdeccd; padding: .4rem .6rem; border-radius: 4px }
+  li.chk { background: #fdeccd; border-radius: 3px }
   .ok { color: #2e6b3a } .no { color: #a0522d } .none { color: #777; font-style: italic }
   @media (max-width: 700px) { .card { grid-template-columns: 1fr } }
 </style>

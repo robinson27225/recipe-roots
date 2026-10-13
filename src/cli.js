@@ -166,6 +166,9 @@ if (id === 'scan') {
   try { existing = JSON.parse(await readFile(file, 'utf8')); } catch { /* new file */ }
   const scans = await collectScans(positionals[1], path.join('.cache', 'scans'));
   if (!scans.length) { log('No images or PDFs found there (jpg, png, webp, gif, pdf).'); process.exit(1); }
+  // Don't read the copies this command itself wrote to <recipes-file folder>/scans last time.
+  const ownCopies = path.resolve(dir, 'scans') + path.sep;
+  for (let i = scans.length - 1; i >= 0; i--) if (path.resolve(scans[i].source).startsWith(ownCopies)) scans.splice(i, 1);
   for (const s of scans) s.ancestor = ancestorFromPath(s.source, v.ancestor);
   const unassigned = [...new Set(scans.filter((s) => !s.ancestor).map((s) => s.source))];
   if (unassigned.length) {

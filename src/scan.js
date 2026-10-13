@@ -111,8 +111,43 @@ async function askVision(llm, prompt, image, { fetchImpl = fetch } = {}) {
 }
 
 const FRACTIONS = { '¼': '1/4', '½': '1/2', '¾': '3/4', '⅓': '1/3', '⅔': '2/3', '⅛': '1/8' };
-export const numbersIn = (text) =>
-  new Set((String(text).replace(/[¼½¾⅓⅔⅛]/g, (c) => ` ${FRACTIONS[c]} `).match(/\d+(?:[./]\d+)?/g) ?? []));
+const numberList = (text) => String(text).replace(/[¼½¾⅓⅔⅛]/g, (c) => ` ${FRACTIONS[c]} `).match(/\d+(?:[./]\d+)?/g) ?? [];
+export const numbersIn = (text) => new Set(numberList(text));
+/** How many times each number appears: a "2" that one reading has twice and the other once is a disagreement. */
+export function numberCounts(text) {
+  const counts = new Map();
+  for (const n of numberList(text)) counts.set(n, (counts.get(n) ?? 0) + 1);
+  return counts;
+}
+
+/** A card has one title. When the model splits one card into several recipes with the same title, join them in order. */
+export function mergeSameTitle(recipes) {
+  const out = [];
+  for (const r of recipes) {
+    const key = r.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const prior = out.find((o) => o.key === key);
+    if (!prior) { out.push({ ...r, key }); continue; }
+    prior.ingredients.push(...r.ingredients);
+    prior.directions.push(...r.directions);
+    prior.notes = [prior.notes, r.notes].filter(Boolean).join(' ') || null;
+  }
+  return out.map(({ key, ...r }) => r);
+}
+
+/**
+ * Cards written in two columns (ingredients on the left, "mix well" on the right) confuse the model, which then files
+ * some ingredient lines under directions. A short line under directions that opens with an amount and a measure
+ * ("2 1/2 cups whole milk") is an ingredient; move it, keeping the order. Wording is untouched.
+ */
+const AMOUNT_LINE = /^(?:\d+\s+)?[\d¼½¾⅓⅔⅛][\d\s/.¼½¾⅓⅔⅛-]*\s*(?:cups?|c\b\.?|tsp\b\.?|tbsp\b\.?|t\b|T\b|oz\b\.?|ounces?|lbs?\b\.?|pounds?|pinch|dash|sticks?|cans?|pkg\b\.?|lg\b\.?|large|small|medium)\s+\S/i;
+export function moveIngredientLines(recipe) {
+  const keep = [], moved = [];
+  for (const d of recipe.directions) (d.split(/\s+/).length <= 9 && AMOUNT_LINE.test(d) ? moved : keep).push(d);
+  return moved.length ? { ...recipe, ingredients: [...recipe.ingredients, ...moved], directions: keep } : recipe;
+}
+
+/** A stray pen mark or tick at the end of a line is not part of the recipe. */
+const tidyLine = (s) => s.replace(/\s*[,;\\/|]+$/, '').trim();
 
 /**
  * Transcribe one scan. Returns drafts plus any quantity disagreements between the
@@ -122,25 +157,31 @@ export async function transcribeScan(llm, imagePath, opts) {
   const image = await dataUri(imagePath);
   const first = await askVision(llm, TRANSCRIBE, image, opts);
   const list = Array.isArray(first.recipes) ? first.recipes : [];
-  const recipes = list
+  const recipes = mergeSameTitle(list
     .filter((r) => r && typeof r.title === 'string' && Array.isArray(r.ingredients) && r.ingredients.length)
     .map((r) => ({
       title: r.title.trim(),
-      ingredients: r.ingredients.map(String).map((s) => s.trim()).filter(Boolean),
-      directions: (Array.isArray(r.directions) ? r.directions : [r.directions ?? '']).map(String).map((s) => s.trim()).filter(Boolean),
+      ingredients: r.ingredients.map(String).map(tidyLine).filter(Boolean),
+      directions: (Array.isArray(r.directions) ? r.directions : [r.directions ?? '']).map(String).map(tidyLine).filter(Boolean),
       notes: typeof r.notes === 'string' && r.notes.trim() ? r.notes.trim() : null,
-    }));
-  let seen = new Set();
-  try { seen = numbersIn(((await askVision(llm, NUMBERS, image, opts)).numbers ?? []).join(' ')); } catch { /* second pass is advisory */ }
-  const flags = recipes.map((r) => quantityDiff(r, seen));
+    })));
+  recipes.forEach((r, i) => { recipes[i] = moveIngredientLines(r); });
+  let seen = null;
+  try { seen = ((await askVision(llm, NUMBERS, image, opts)).numbers ?? []).join(' '); } catch { /* second pass is advisory */ }
+  // The second reading is of the whole image, so with several recipes on it each is checked against the same list
+  // only when there is one; with more, a number is flagged only if it is in none of them.
+  const flags = recipes.map((r) => (seen == null ? { onlyInTranscript: [], onlyInSecondReading: [] } : quantityDiff(r, seen, recipes.length > 1)));
   return { recipes, flags };
 }
 
-/** Numbers present in one reading but not the other (empty arrays mean they agree). */
-export function quantityDiff(recipe, seen) {
-  const written = numbersIn([...recipe.ingredients, ...recipe.directions].join(' '));
-  return {
-    onlyInTranscript: [...written].filter((n) => !seen.has(n)),
-    onlyInSecondReading: [...seen].filter((n) => !written.has(n)),
-  };
+/**
+ * Numbers that differ between the transcription and an independent second reading of the image (empty arrays mean
+ * they agree). Counted, not just listed: a "2" written twice in one and once in the other (the other has "1/2")
+ * is a disagreement. With several recipes sharing one image only presence is compared, since counts can't be split.
+ */
+export function quantityDiff(recipe, seenText, shared = false) {
+  const written = numberCounts([...recipe.ingredients, ...recipe.directions].join(' '));
+  const seen = numberCounts(seenText);
+  const differs = (a, b) => [...a].filter(([n, c]) => (shared ? !b.has(n) : (b.get(n) ?? 0) < c)).map(([n]) => n);
+  return { onlyInTranscript: differs(written, seen), onlyInSecondReading: differs(seen, written) };
 }

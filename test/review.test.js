@@ -12,6 +12,7 @@ test('review sheet puts each scan beside its transcription, flags unreviewed one
   assert.match(html, /Beef &lt;Roll&gt;/);
   assert.match(html, /scans\/a\.jpg/);
   assert.match(html, /disagreed on \[350\]/);
+  assert.match(renderReview([{ title: 'T', ancestor: 'S-1', ingredients: ['2 c. cocoa', '1 egg'], directions: [], transcribedByAI: true, check: { onlyInTranscript: ['2'], onlyInSecondReading: ['1/2'] } }]), /<li class="chk">2 c\. cocoa/);
   assert.match(html, /<b class="ok">reviewed<\/b>/);
   assert.match(html, /Nothing was transcribed/);
 });
