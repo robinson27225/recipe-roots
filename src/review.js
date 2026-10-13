@@ -21,6 +21,7 @@ export function renderReview(recipes, { title = 'Check your scanned recipes' } =
     ${r.pageOnly ? '<p class="none">Printed as a page, exactly as scanned. Nothing was transcribed.</p>' : `
     <h3>Ingredients</h3><ul>${(r.ingredients ?? []).map(li).join('')}</ul>
     <h3>Directions</h3><ol>${(r.directions ?? []).map(li).join('')}</ol>
+    ${r.yield ? `<h3>Yield</h3><p>${esc(r.yield)}</p>` : ''}
     ${r.story ? `<h3>Notes</h3><p>${esc(r.story)}</p>` : ''}`}
   </div>
 </section>`;

@@ -57,7 +57,7 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .portrait { margin: 0; flex: none; width: 1.05in; text-align: center; }
 .portrait img { width: 100%; max-height: 1.35in; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); }
 .portrait figcaption { font-size: 6.5pt; color: #8a8372; margin-top: .03in; line-height: 1.25; }
-.kitchen { font-size: 9.5pt; background: #f3ecdd; border-left: 3px solid var(--green); padding: .08in .18in; margin: .25in 0 0; }
+.kitchen { break-inside: avoid; font-size: 9.5pt; background: #f3ecdd; border-left: 3px solid var(--green); padding: .08in .18in; margin: .25in 0 0; }
 .kitchen h4 { margin: 0 0 .06in; font-size: 8.5pt; letter-spacing: .15em; text-transform: uppercase; color: var(--green); }
 .kitchen p { margin: 0 0 .5em; }
 .recipe { break-before: page; }
@@ -192,6 +192,13 @@ ${recipes.map((r) => recipe(r, text.headnotes[r.id], story, modelLabel)).join('\
 }
 
 /** A family recipe page. With a cook page before it the cook's portrait and fan chart live there, so this page is just the recipe. */
+/** "Makes 7 ramekins": print what the card says, adding a label only when it doesn't already start with one. */
+export function yieldLine(y) {
+  const text = String(y ?? '').trim();
+  if (!text) return '';
+  return /^(makes?|serves?|yields?)\b/i.test(text) ? esc(text) : `<span class="lab">Makes</span>${esc(text)}`;
+}
+
 function familyRecipe(r, { id, profiled, modelLabel }) {
   const who = profiled ? '' : `<p class="who"><span class="lab">${r.direct || !r.person ? 'Ancestor' : 'Relative'}</span>${esc(r.ancestorName)}${r.relation ? `, ${esc(r.relation)}` : ''} <span class="small">· wikitree.com/wiki/${esc(r.ancestor)}</span></p>`;
   const head = `${mk(id)}
@@ -199,6 +206,7 @@ function familyRecipe(r, { id, profiled, modelLabel }) {
   <h3>${esc(r.title)}</h3>
   <p class="cat">${esc(r.category)}</p>
   ${who}
+  ${r.yield ? `<p class="who">${yieldLine(r.yield)}</p>` : ''}
   ${r.contributor ? `<p class="who"><span class="lab">Shared by</span>${esc(r.contributor)}</p>` : ''}
   ${r.source ? `<p class="source">Source: ${esc(r.source)}</p>` : ''}`;
   const period = r.period ? `<section class="period-page">${periodBlock(r.period, modelLabel)}</section>` : '';

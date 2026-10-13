@@ -203,7 +203,7 @@ if (id === 'scan') {
       recipes.forEach((r, j) => {
         const f = flags[j];
         const bad = f.onlyInTranscript.length || f.onlyInSecondReading.length;
-        existing.push({ title: r.title, ancestor: who, category: categorize(r), contributor: v.contributor ?? null, ingredients: r.ingredients, directions: r.directions, story: r.notes, image: rel, transcribedByAI: true, reviewed: false, ...(bad ? { check: { onlyInTranscript: f.onlyInTranscript, onlyInSecondReading: f.onlyInSecondReading } } : {}), ...(v['no-scan-page'] ? { showScan: false } : {}) });
+        existing.push({ title: r.title, ancestor: who, category: categorize(r), contributor: v.contributor ?? null, ingredients: r.ingredients, directions: r.directions, ...(r.yield ? { yield: r.yield } : {}), story: r.notes, image: rel, transcribedByAI: true, reviewed: false, ...(bad ? { check: { onlyInTranscript: f.onlyInTranscript, onlyInSecondReading: f.onlyInSecondReading } } : {}), ...(v['no-scan-page'] ? { showScan: false } : {}) });
         added++;
         log(`  ${path.basename(src)} → "${r.title}" (${r.ingredients.length} ingredients)${bad ? `\n    ⚠ check amounts: transcript-only [${f.onlyInTranscript.join(', ')}], second-reading-only [${f.onlyInSecondReading.join(', ')}]` : ''}`);
       });

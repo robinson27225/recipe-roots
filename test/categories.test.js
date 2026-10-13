@@ -55,3 +55,15 @@ test('family people notes: story and photo note by ID, comments ignored, empty e
   const got = parseFamilyPeople(JSON.stringify({ _comment: 'x', 'Smith-1': { story: ' She baked on Sundays. ' }, 'Smith-2': {}, 'Smith-3': { photoNote: 'At the farm' } }));
   assert.deepEqual(got, { 'Smith-1': { story: 'She baked on Sundays.', photoNote: null }, 'Smith-3': { story: null, photoNote: 'At the farm' } });
 });
+
+import { yieldLine } from '../src/book.js';
+
+test('a recipe can say what it makes; the book prints the card\'s own words, labelled only when needed', () => {
+  const [r] = parseFamilyRecipes(JSON.stringify([{ title: 'Pudding', ancestor: 'Smith-1', yield: ' Make 7 Ramekins ', ingredients: ['x'] }]));
+  assert.equal(r.yield, 'Make 7 Ramekins');
+  assert.equal(yieldLine('Make 7 Ramekins'), 'Make 7 Ramekins');
+  assert.equal(yieldLine('Serves 6'), 'Serves 6');
+  assert.match(yieldLine('7 ramekins'), /<span class="lab">Makes<\/span>7 ramekins/);
+  assert.equal(yieldLine(null), '');
+  assert.equal(yieldLine('<b>'), '<span class="lab">Makes</span>&lt;b&gt;');
+});

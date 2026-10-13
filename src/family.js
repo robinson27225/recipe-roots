@@ -5,6 +5,7 @@
 //     "story": "optional: who made it, when you ate it",
 //     "image": "scans/card.jpg"      (optional, relative to this file: printed as its own page)
 //     "pageOnly": true               (optional: the scan IS the page; ingredients/directions not needed)
+//     "yield": "Makes 7 ramekins"    (optional: how much it makes or serves, as written on the card; printed under the title)
 //     "category": "Soups & Stews"     (optional: file it under this chapter of the index; otherwise it is suggested from the title)
 //     "showScan": false,           (optional: leave the scan out even though an image is given)
 //     "source": "Find a Grave memorial 123, accessed 2023"   (optional: a citation printed under the recipe)
@@ -46,6 +47,7 @@ export function parseFamilyRecipes(raw) {
       directions: directions.map((x) => x.trim()).filter(Boolean), story: r.story?.trim() || null,
       thirdParty: r.thirdParty === true, rightsHolder: r.rightsHolder && typeof r.rightsHolder === 'object' ? r.rightsHolder : null,
       permission: r.permission === true, suppliedName: typeof r.ancestorName === 'string' ? r.ancestorName.trim() || null : null,
+      yield: typeof r.yield === 'string' ? r.yield.trim() || null : null,
       category: CATEGORIES.includes(r.category) ? r.category : null,
       source: typeof r.source === 'string' ? r.source.trim() || null : null,
       image: typeof r.image === 'string' ? r.image : null, photoNote: typeof r.photoNote === 'string' ? r.photoNote.trim() || null : null, pageOnly, showScan: r.showScan !== false,

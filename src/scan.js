@@ -89,8 +89,8 @@ const TRANSCRIBE = `You are transcribing a scanned page or card from a family re
 Copy the text EXACTLY as written, including old spellings, abbreviations and units (tsp, c., oz.).
 Do not correct mistakes, convert units, reorder anything, or add anything that is not on the page.
 If a word or number cannot be read, write [illegible] in its place instead of guessing.
-A page may hold one recipe or several. Handwritten comments in the margin go in "notes".
-Return JSON only: {"recipes":[{"title": string, "ingredients": [string, ...], "directions": [string, ...], "notes": string or null}]}
+A page may hold one recipe or several. Handwritten comments in the margin go in "notes". How much the recipe makes or serves ("Makes 7 ramekins", "Serves 6"), if written, goes in "yield" and not in "notes".
+Return JSON only: {"recipes":[{"title": string, "ingredients": [string, ...], "directions": [string, ...], "yield": string or null, "notes": string or null}]}
 Put one ingredient per array item and one step or paragraph per directions item.`;
 
 const NUMBERS = `List every number, fraction, temperature, time and quantity you can read in this image, exactly as written.
@@ -129,6 +129,7 @@ export function mergeSameTitle(recipes) {
     if (!prior) { out.push({ ...r, key }); continue; }
     prior.ingredients.push(...r.ingredients);
     prior.directions.push(...r.directions);
+    prior.yield = prior.yield ?? r.yield ?? null;
     prior.notes = [prior.notes, r.notes].filter(Boolean).join(' ') || null;
   }
   return out.map(({ key, ...r }) => r);
@@ -163,6 +164,7 @@ export async function transcribeScan(llm, imagePath, opts) {
       title: r.title.trim(),
       ingredients: r.ingredients.map(String).map(tidyLine).filter(Boolean),
       directions: (Array.isArray(r.directions) ? r.directions : [r.directions ?? '']).map(String).map(tidyLine).filter(Boolean),
+      yield: typeof r.yield === 'string' && r.yield.trim() ? r.yield.trim() : null,
       notes: typeof r.notes === 'string' && r.notes.trim() ? r.notes.trim() : null,
     })));
   recipes.forEach((r, i) => { recipes[i] = moveIngredientLines(r); });
