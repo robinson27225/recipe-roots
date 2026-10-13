@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recipe Roots: your family's recipes, in their own time</title>
+<meta name="description" content="Turn a WikiTree ancestry and a box of scanned family recipes into a print-ready cookbook, written with open-weight models that run on your own computer.">
+<style>
+  :root {
+    --bg: #fbf8f2; --ink: #26241f; --muted: #6b6556; --green: #2f4a3a; --clay: #a0522d; --card: #f3ecdd; --rule: #ddd5c4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1d1c19; --ink: #ece7dc; --muted: #a9a290; --green: #8fb79d; --clay: #d98b62; --card: #292722; --rule: #3a372f; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 18px/1.6 Georgia, "Iowan Old Style", serif; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 16px; }
+  header.hero { padding: 56px 0 24px; text-align: center; }
+  .kicker { color: var(--clay); letter-spacing: .18em; text-transform: uppercase; font-size: .78rem; }
+  h1 { font-size: clamp(2rem, 6vw, 3.2rem); line-height: 1.1; margin: .3em 0 .4em; color: var(--green); }
+  .lead { max-width: 640px; margin: 0 auto 1.4em; color: var(--muted); font-size: 1.1rem; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 32px; }
+  a.btn { display: inline-block; padding: .65em 1.2em; border-radius: 6px; text-decoration: none; font: 600 .95rem system-ui, sans-serif; border: 2px solid var(--green); }
+  a.btn.primary { background: var(--green); color: var(--bg); }
+  a.btn.secondary { color: var(--green); }
+  .hero img { width: 100%; max-width: 900px; height: auto; border-radius: 8px; border: 1px solid var(--rule); }
+  .caption { color: var(--muted); font-size: .85rem; margin-top: .5em; }
+  section { padding: 40px 0; border-top: 1px solid var(--rule); }
+  h2 { font-size: 1.6rem; color: var(--green); margin: 0 0 .6em; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { background: var(--card); padding: 18px 18px 14px; border-radius: 8px; counter-increment: s; }
+  .steps li::before { content: counter(s); display: block; color: var(--clay); font: 700 1.6rem Georgia, serif; }
+  .steps b { display: block; margin-bottom: .2em; }
+  .pages { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 20px; }
+  .pages figure { margin: 0; }
+  .pages img { width: 100%; height: auto; border: 1px solid var(--rule); border-radius: 4px; background: #fff; }
+  .pages figcaption { font-size: .85rem; color: var(--muted); margin-top: .4em; }
+  blockquote { margin: 0; padding: 14px 20px; background: var(--card); border-left: 4px solid var(--clay); border-radius: 0 8px 8px 0; font-style: italic; }
+  ul.plain { padding-left: 1.1em; } ul.plain li { margin: .35em 0; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  footer { border-top: 1px solid var(--rule); padding: 28px 0 56px; color: var(--muted); font-size: .9rem; text-align: center; }
+  a { color: var(--green); }
+  code { font: .88em ui-monospace, Menlo, monospace; background: var(--card); padding: .1em .35em; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="kicker">Recipe Roots</div>
+    <h1>The recipe box, finally a book</h1>
+    <p class="lead">Scan your family's recipe cards, give it your <a href="https://www.wikitree.com">WikiTree</a> ID, and get a print-ready cookbook: each recipe filed under the relative who cooked it, beside who they were and what was happening in kitchens during their life.</p>
+    <div class="btns">
+      <a class="btn primary" href="demo-book.pdf">Read the demo book (PDF)</a>
+      <a class="btn secondary" href="https://github.com/robinson27225/recipe-roots">Code on GitHub</a>
+    </div>
+    <img src="images/whole-book.png" alt="Contact sheet of a 33-page demo cookbook: contents, chapters, a page per cook, indices" width="900" height="996">
+    <p class="caption">The demo book, built from the author's own public WikiTree tree and one handwritten recipe card.</p>
+  </header>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><b>Read the tree</b>Ancestors, plus great-aunts and great-uncles, from WikiTree's public API. Living people are never included.</li>
+      <li><b>Scan the cards</b>Assign each scan to the person who cooked it. A local vision model drafts the transcription, you proofread it beside the scan, or print the scan itself as the page.</li>
+      <li><b>Get the book</b>A page per cook, recipes by category, a contents page with real page numbers, and the period version of the same dish from a public-domain cookbook.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>What a page looks like</h2>
+    <div class="pages">
+      <figure><img src="images/cook-page.png" alt="A cook's opening page with life facts, fan chart and kitchen history" loading="lazy"><figcaption>A cook's page: life facts from the tree, her parents and grandparents, and what was happening in kitchens in her time.</figcaption></figure>
+      <figure><img src="images/handwritten-page.png" alt="A handwritten recipe card printed as a page" loading="lazy"><figcaption>The original card, as scanned, after the transcription I proofread against it.</figcaption></figure>
+      <figure><img src="images/period-page.png" alt="A 1916 recipe quoted word for word, then set as ingredients and method" loading="lazy"><figcaption>"How they wrote it": a public-domain cookbook's own wording, then the same receipt as ingredients and method.</figcaption></figure>
+      <figure><img src="images/contents.png" alt="A contents page with page numbers" loading="lazy"><figcaption>Contents and indices with real page numbers.</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <blockquote>It is powerful to see a handwritten family recipe and the information about that ancestor together on a page, in a book that can be handed down to nieces and nephews.</blockquote>
+  </section>
+
+  <section class="two">
+    <div>
+      <h2>Why open models</h2>
+      <ul class="plain">
+        <li><b>Private.</b> The scans never leave your computer; the vision model runs locally.</li>
+        <li><b>No per-book fee.</b> Local inference costs electricity, not tokens.</li>
+        <li><b>Controlled.</b> The model only writes about food. Code writes every fact about a person, and a guard rejects invented years, kin and names.</li>
+        <li>Built on Gemma 3, EmbeddingGemma, and Postgres with pgvector (tested on Tiger Cloud).</li>
+      </ul>
+    </div>
+    <div>
+      <h2>Honest limits</h2>
+      <ul class="plain">
+        <li>Chapter recipes are traditional dishes for the family's places and eras, <b>not</b> your family's, and not kitchen-tested.</li>
+        <li>Handwriting transcription is a draft: it misread &frac12; cup as 2 cups on a real card. Always proofread, or use the scan as the page.</li>
+        <li>WikiTree photos and recipes are gated on membership and permission, and the tool can only take your word on the Honor Code.</li>
+      </ul>
+    </div>
+  </section>
+
+  <footer>
+    Open source (MIT). Genealogical data from <a href="https://www.wikitree.com">WikiTree</a>, the free shared family tree. Period receipts are public-domain cookbooks from Project Gutenberg and the Internet Archive.<br>
+    Made for the DEV Hacktoberfest Open-Source AI Challenge, Week 2.
+  </footer>
+</div>
+</body>
+</html>
