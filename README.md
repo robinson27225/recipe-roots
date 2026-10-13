@@ -9,7 +9,7 @@ node src/cli.js Wilder-1 --title "The Wilder Table" --dedication "For Grandma"
 ```
 
 Needs Node 20+ and Chrome/Chromium for the PDF (`CHROME_PATH` if not found). The only dependency is `pg`, and only used with a database.
-Demo books (PDFs in [docs/](docs)): [one built from the author's own WikiTree tree](docs/demo-book.pdf), with one scanned handwritten recipe and one WikiTree photo, the author's own upload (`node src/cli.js Robinson-27225 --family-recipes examples/robinson-demo/family-recipes.json --title "The Robinson Table" --wikitree-photos --wikitree-photos-for Budd-1260 --me Robinson-27225 --honor-code-signed --confirm-permission`), and [a fully fictional one](docs/demo-fictional.pdf) with ten recipes and eight cooks (`node examples/fictional-demo.mjs`).
+Demo books (PDFs in [docs/](docs)): [one built from the author's own WikiTree tree](docs/demo-book.pdf), with one scanned handwritten recipe and the profile photos the author uploaded to WikiTree themself (`node src/cli.js Robinson-27225 --family-recipes examples/robinson-demo/family-recipes.json --title "The Robinson Table" --wikitree-photos --me Robinson-27225 --honor-code-signed --confirm-permission`), and [a fully fictional one](docs/demo-fictional.pdf) with ten recipes and eight cooks (`node examples/fictional-demo.mjs`).
 
 ## What goes in the book
 - **Chapters from real migrations** found in the tree: a fan chart of the lead ancestor, who moved where and when (as an honest window), a short "in the kitchen, in those years" note, and three traditional dishes.
