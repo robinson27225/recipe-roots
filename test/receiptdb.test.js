@@ -97,3 +97,22 @@ test("the chapters' traditional dishes are filed by category too, credited to th
   assert.equal(got[1].category, 'Cakes, Pies & Desserts');
   assert.equal(got[2].category, 'Breads & Breakfast');
 });
+
+import { avatarFor } from '../src/book.js';
+
+test("a person without a photo gets WikiTree's round placeholder for their gender, only when the book uses photos", () => {
+  assert.equal(avatarFor({ uri: 'data:photo' }, 'Male', true), 'data:photo');                  // a real photo always wins
+  assert.match(avatarFor(undefined, 'Male', true), /^data:image\/png;base64,/);
+  assert.match(avatarFor(undefined, 'Female', true), /^data:image\/png;base64,/);
+  assert.notEqual(avatarFor(undefined, 'Male', true), avatarFor(undefined, 'Female', true));
+  assert.equal(avatarFor(undefined, undefined, true), null);                                    // unknown gender: no guess
+  assert.equal(avatarFor(undefined, 'Male', false), null);                                      // no photos in this book: no avatar column
+});
+
+import { chapterTextClass } from '../src/book.js';
+
+test('a crowded chapter text page is set a little smaller; a light one is not', () => {
+  assert.equal(chapterTextClass(3, 'x'.repeat(900)), 'chapter-text');
+  assert.equal(chapterTextClass(8, 'x'.repeat(1250)), 'chapter-text tight');
+  assert.equal(chapterTextClass(1, ['x'.repeat(900), 'y'.repeat(900)]), 'chapter-text tight');
+});

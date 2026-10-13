@@ -7,6 +7,12 @@ import { categorize, groupByCategory, CATEGORIES } from './categories.js';
 import { readFileSync } from 'node:fs';
 
 // The WikiTree heart in pastel yellow (tools/recolor-logo.swift), embedded so the PDF is self-contained.
+// WikiTree's own round placeholders for profiles without a photo (assets/), so the lists keep their shape.
+const roundIcon = (name) => { try { return `data:image/png;base64,${readFileSync(new URL(`../assets/wikitree-${name}-round.png`, import.meta.url)).toString('base64')}`; } catch { return null; } };
+const PLACEHOLDER = { Male: roundIcon('male'), Female: roundIcon('female') };
+/** The photo's data URI, or WikiTree's round placeholder for that gender, or null (unknown gender). Only when the book uses photos at all. */
+export const avatarFor = (photo, gender, photosInUse) => photo?.uri ?? (photosInUse ? PLACEHOLDER[gender] ?? null : null);
+
 const HEART = (() => {
   try { return `data:image/png;base64,${readFileSync(new URL('../assets/wikitree-heart-yellow.png', import.meta.url)).toString('base64')}`; } catch { return null; }
 })();
@@ -56,16 +62,20 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .chapter-open .fan { width: 66%; margin: 0 auto; }
 .chapter-open .kitchen { margin-top: .2in; }
 .chapter-text { break-after: page; }
+.chapter-text.tight { font-size: 9.4pt; line-height: 1.42; }
+.chapter-text.tight p { margin-bottom: .55em; }
 a.wt { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
 .wtid { font-variant-numeric: tabular-nums; letter-spacing: .01em; }
 .fan { width: 100%; height: auto; display: block; }
 .people { list-style: none; padding: 0; margin: 0 0 .25in; font-size: 9.5pt; }
-.people li { padding: .06in 0; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: .2in; }
+.people li { padding: .04in 0; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; gap: .2in; }
 .people .rel { color: #6b6556; font-style: italic; }
+.people .rel { white-space: nowrap; flex: none; align-self: center; }
 .people .who-line { display: flex; align-items: center; gap: .1in; }
-.avatar { width: .42in; height: .42in; border-radius: 50%; object-fit: cover; border: 1px solid var(--rule); flex: none; }
+.avatar { width: .34in; height: .34in; border-radius: 50%; object-fit: cover; border: 1px solid var(--rule); flex: none; }
 .info { display: flex; justify-content: space-between; align-items: flex-start; gap: .2in; margin-bottom: .05in; }
 .portrait { margin: 0; flex: none; width: 1.05in; text-align: center; }
+.portrait.ph img { width: 1in; height: 1in; max-height: none; border-radius: 50%; border: 0; object-fit: contain; }
 .portrait img { width: 100%; max-height: 1.35in; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); }
 .portrait figcaption { font-size: 6.5pt; color: #8a8372; margin-top: .03in; line-height: 1.25; }
 .kitchen { break-inside: avoid; font-size: 9.5pt; background: #f3ecdd; border-left: 3px solid var(--green); padding: .08in .18in; margin: .25in 0 0; }
@@ -185,6 +195,16 @@ function recipe(r, headnote, story, modelLabel, anchor) {
 </section>`;
 }
 
+/**
+ * A long cast of relatives plus a long model-written introduction can run a few lines onto a second page that
+ * holds almost nothing. Past this much text the page is set a little smaller instead (about 90 characters of
+ * height per listed person, as for the people list above the text).
+ */
+export const chapterTextClass = (peopleCount, intro) => {
+  const text = String(Array.isArray(intro) ? intro.join(' ') : intro ?? '');
+  return text.length + 90 * peopleCount >= 1700 ? 'chapter-text tight' : 'chapter-text';
+};
+
 function chapter(c, n, people, photos, modelLabel) {
   const { story, recipes, text } = c;
   const place = story.originPlace && story.originPlace.toLowerCase().endsWith(story.from.label.toLowerCase()) ? story.originPlace : [story.originPlace, story.from.label].filter(Boolean).join(', ');
@@ -201,8 +221,8 @@ function chapter(c, n, people, photos, modelLabel) {
   ${fan ? `<figure>${fan}<figcaption>${esc(lead.name)}, ${esc(lead.relation)}: parents and grandparents</figcaption></figure>` : ''}
   ${kitchen}
 </section>
-<section class="chapter-text">
-  <ul class="people">${story.people.map((p) => `<li><span class="who-line">${photos?.get(p.id) ? `<img class="avatar" src="${photos.get(p.id).uri}" alt="">` : ''}<span>${p.wikiTreeId ? wtLink(esc(p.name), p.wikiTreeId) : esc(p.name)} <span class="small">${esc(lifespan(p))}${p.wikiTreeId ? ` · ${wtId(p.wikiTreeId)}` : ''}</span></span></span><span class="rel">${esc(p.relation)}</span></li>`).join('')}</ul>
+<section class="${chapterTextClass(story.people.length, text.intro)}">
+  <ul class="people">${story.people.map((p) => `<li><span class="who-line">${(() => { const uri = avatarFor(photos?.get(p.id), people?.get(p.id)?.Gender, photos?.size > 0); return uri ? `<img class="avatar" src="${uri}" alt="">` : ''; })()}<span>${p.wikiTreeId ? wtLink(esc(p.name), p.wikiTreeId) : esc(p.name)} <span class="small">${esc(lifespan(p))}${p.wikiTreeId ? ` · ${wtId(p.wikiTreeId)}` : ''}</span></span></span><span class="rel">${esc(p.relation)}</span></li>`).join('')}</ul>
   ${paras(text.intro)}
 </section>
 ${recipes.map((r, j) => recipe(r, text.headnotes[r.id], story, modelLabel, `c${n}r${j + 1}`)).join('\n')}`;
@@ -256,7 +276,8 @@ function cookPage(cook, id, { people, photos }) {
   const { profile } = cook;
   const photo = photos?.get(cook.person.Id);
   const note = cook.photoNote ? `${esc(cook.photoNote)}<br>` : '';
-  const portrait = photo ? `<figure class="portrait"><img src="${photo.uri}" alt="${esc(profile.name)}"><figcaption>${photo.caption ? `${esc(photo.caption)}<br>` : ''}${note}${photo.credit ? `Photo: ${esc(photo.credit)}` : `Photo: WikiTree ${photo.pageUrl ? `<a class="wt" href="https://www.wikitree.com${esc(photo.pageUrl)}">photo page</a>, ` : ''}profile ${wtId(photo.name)}`}</figcaption></figure>` : '';
+  const placeholder = !photo && photos?.size > 0 ? PLACEHOLDER[cook.person?.Gender] : null;
+  const portrait = placeholder ? `<figure class="portrait ph"><img src="${placeholder}" alt=""></figure>` : photo ? `<figure class="portrait"><img src="${photo.uri}" alt="${esc(profile.name)}"><figcaption>${photo.caption ? `${esc(photo.caption)}<br>` : ''}${note}${photo.credit ? `Photo: ${esc(photo.credit)}` : `Photo: WikiTree ${photo.pageUrl ? `<a class="wt" href="https://www.wikitree.com${esc(photo.pageUrl)}">photo page</a>, ` : ''}profile ${wtId(photo.name)}`}</figcaption></figure>` : '';
   const fan = people ? fanChartSvg(pedigree(people, cook.person.Id)) : '';
   const move = profile.chapter ? `<p class="small">Their move from ${esc(profile.chapter.from)} to ${esc(profile.chapter.to)} is in <a href="#ch${profile.chapter.number}">Chapter ${profile.chapter.number}</a>.</p>` : '';
   return `
