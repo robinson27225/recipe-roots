@@ -169,12 +169,22 @@ function recipe(r, headnote, story, modelLabel) {
 </section>`;
 }
 
+/**
+ * How many kitchen-history notes fit under a chapter's opening text on the same page. A long cast of relatives or a
+ * long intro leaves little room, and a note box that doesn't fit is pushed whole onto an otherwise empty page.
+ * Estimated from the amount of text above it (about 90 characters of height per listed person).
+ */
+export function historyLimit(peopleCount, intro) {
+  const weight = String(Array.isArray(intro) ? intro.join(' ') : intro ?? '').length + 90 * peopleCount;
+  return weight >= 1800 ? 1 : weight >= 1250 ? 2 : 3;
+}
+
 function chapter(c, n, people, photos, modelLabel) {
   const { story, recipes, text } = c;
   const place = story.originPlace && story.originPlace.toLowerCase().endsWith(story.from.label.toLowerCase()) ? story.originPlace : [story.originPlace, story.from.label].filter(Boolean).join(', ');
   const lead = [...story.people].sort((a, b) => a.gen - b.gen)[0];
   const fan = people ? fanChartSvg(pedigree(people, lead.id)) : '';
-  const history = kitchenHistory({ lo: story.lo - 10, hi: story.hi + 10, regionKeys: [story.from.key, story.to.key] });
+  const history = kitchenHistory({ lo: story.lo - 10, hi: story.hi + 10, regionKeys: [story.from.key, story.to.key] }, historyLimit(story.people.length, text.intro));
   return `
 <section class="chapter-open">
   <div class="num">Chapter ${n}</div>
