@@ -2,6 +2,8 @@
 
 # Recipe Roots
 
+Write-up on DEV: [Recipe Roots: a shoebox of recipe cards, a WikiTree profile, and a cookbook your family will fight over](https://dev.to/robinson27225/recipe-roots-a-shoebox-of-recipe-cards-a-wikitree-profile-and-a-cookbook-your-family-will-fight-52mo). Site: [reciperoots.tech](https://reciperoots.tech).
+
 Turn a public [WikiTree](https://www.wikitree.com) ancestry into a print-ready family cookbook (6×9 in PDF): the places your ancestors came from, the food history of their eras, traditional dishes from those kitchens, and **your own family's recipes, scanned from the originals**.
 
 ```bash
