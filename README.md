@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/images/logo.png" alt="Recipe Roots logo" width="140"></p>
+
 # Recipe Roots
 
 Turn a public [WikiTree](https://www.wikitree.com) ancestry into a print-ready family cookbook (6×9 in PDF): the places your ancestors came from, the food history of their eras, traditional dishes from those kitchens, and **your own family's recipes, scanned from the originals**.
