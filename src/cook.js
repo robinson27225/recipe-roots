@@ -19,11 +19,11 @@ export function ageAtDeath(birthDate, deathDate) {
 }
 
 /** "Born in 1903 in Audubon, Iowa, to George and Kathleen. Died in 1958 in El Monte, California, aged 55." */
-export function lifeSentence({ born, birthPlace, parents = [], died, deathPlace, age }) {
+export function lifeSentence({ born, bornDecade, birthPlace, parents = [], died, deathPlace, age }) {
   const parts = [];
-  if (born || birthPlace) {
+  if (born || bornDecade || birthPlace) {
     let s = 'Born';
-    if (born) s += ` in ${born}`;
+    if (born) s += ` in ${born}`; else if (bornDecade) s += ` in the ${bornDecade}`;
     if (birthPlace) s += `${born ? ' in' : ' in'} ${birthPlace}`;
     if (parents.length) s += `, to ${parents.join(' and ')}`;
     parts.push(s);
@@ -46,20 +46,27 @@ export function lifeSentence({ born, birthPlace, parents = [], died, deathPlace,
 export function cookProfile({ person, people, chapters = [], note = null, relation = null, name = null }) {
   // A living person the family agreed to name: name, relation, parents and photo, but no dates or places.
   const keepPrivate = person.PermittedLiving === true;
+  // WikiTree shows a living person's birth decade publicly ("1930s"): used for the kitchen-history window, and printed as the decade.
+  const decade = keepPrivate && /^\d{3}0s$/.test(person.BirthDateDecade ?? '') ? person.BirthDateDecade : null;
+  const bornApprox = decade ? Number(decade.slice(0, 4)) + 5 : null;
   const born = keepPrivate ? null : yearOf(person.BirthDate), died = keepPrivate ? null : yearOf(person.DeathDate);
   const parents = [person.Father, person.Mother].map((id) => people.get(id)).filter((p) => p && !living(p)).map(displayName);
   const birthPlace = keepPrivate ? null : placeOf(person.BirthLocation), deathPlace = keepPrivate ? null : placeOf(person.DeathLocation);
-  const lifeStart = born ?? (died ? died - 70 : null);
+  const lifeStart = born ?? bornApprox ?? (died ? died - 70 : null);
   const lo = lifeStart != null ? lifeStart + 12 : null;
-  const hi = died ?? (born != null ? born + 75 : null);
-  const regionKeys = keepPrivate ? [] : [regionOf(person.BirthLocation)?.key, regionOf(person.DeathLocation)?.key].filter(Boolean);
+  const hi = died ?? (born != null ? born + 75 : bornApprox != null ? Math.min(bornApprox + 75, new Date().getFullYear()) : null);
+  // A permitted living person's own places stay private, so the kitchen history follows where their (deceased) parents lived.
+  const parentPlaces = (people.size && [person.Father, person.Mother].map((id) => people.get(id)).filter((p) => p && !living(p))) || [];
+  const regionKeys = keepPrivate
+    ? [...new Set(parentPlaces.flatMap((p) => [regionOf(p.BirthLocation)?.key, regionOf(p.DeathLocation)?.key]).filter(Boolean))]
+    : [regionOf(person.BirthLocation)?.key, regionOf(person.DeathLocation)?.key].filter(Boolean);
   const kitchen = lo != null && hi != null && hi >= lo ? kitchenHistory({ lo, hi: Math.min(hi, lo + 75), regionKeys }, 3) : [];
   const n = chapters.findIndex((c) => c.story.people.some((p) => p.id === person.Id));
   const chapter = n >= 0 ? { number: n + 1, from: chapters[n].story.from.label, to: chapters[n].story.to.label, lo: chapters[n].story.lo, hi: chapters[n].story.hi } : null;
   return {
-    name: name ?? displayName(person), relation, born, died, birthPlace, deathPlace, parents,
-    years: born || died ? `${born ?? '?'}–${died ?? '?'}` : '',
-    life: lifeSentence({ born, birthPlace, parents, died, deathPlace, age: keepPrivate ? null : ageAtDeath(person.BirthDate, person.DeathDate) }),
+    name: name ?? displayName(person), relation, born, bornApprox, died, birthPlace, deathPlace, parents,
+    years: born || died ? `${born ?? '?'}–${died ?? '?'}` : decade ? `born in the ${decade}` : '',
+    life: lifeSentence({ born, bornDecade: decade, birthPlace, parents, died, deathPlace, age: keepPrivate ? null : ageAtDeath(person.BirthDate, person.DeathDate) }),
     kitchen, chapter, story: note?.story ?? null,
   };
 }

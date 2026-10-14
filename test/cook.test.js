@@ -88,3 +88,19 @@ test('a permitted living person is the centre of their own fan chart, by supplie
   assert.equal(father.name, 'Ed Lee');
   assert.equal(pedigree(new Map([[1, { ...self, PermittedLiving: false }]]), 1)[0], null);   // living and not permitted: not drawn
 });
+
+test("a permitted living cook's public birth decade gives a kitchen-history window and 'Born in the 1930s', never a date", () => {
+  const people = new Map([
+    [1, { Id: 1, Name: 'Lee-1', IsLiving: 1, PermittedLiving: true, BirthDateDecade: '1930s', Father: 2, BirthDate: '1936-04-05' }],
+    [2, { Id: 2, Name: 'Lee-2', IsLiving: 0, FirstName: 'Ed', LastNameAtBirth: 'Lee', BirthDate: '1900-01-01', DeathDate: '1970-01-01', BirthLocation: 'Olympia, Washington, United States' }],
+  ]);
+  const prof = cookProfile({ person: people.get(1), people, name: 'Jo Lee', relation: 'mother' });
+  assert.equal(prof.life, 'Born in the 1930s, to Ed Lee.');         // the decade, not the birth date that was in the data
+  assert.equal(prof.years, 'born in the 1930s');
+  assert.equal(prof.born, null);
+  assert.equal(prof.bornApprox, 1935);
+  assert.ok(prof.kitchen.length > 0);                                // kitchen history for the years she grew up and cooked
+  assert.ok(prof.kitchen.every((k) => k.from <= 2026));
+  assert.equal(prof.birthPlace, null);                               // her own place stays private; the history follows her parents' region
+  assert.ok(prof.kitchen.some((k) => /supermarkets|microwave/i.test(k.text)));
+});

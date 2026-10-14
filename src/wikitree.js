@@ -4,7 +4,7 @@ import path from 'node:path';
 const API = 'https://api.wikitree.com/api.php';
 export const FIELDS = [
   'Id', 'Name', 'FirstName', 'MiddleName', 'LastNameAtBirth', 'LastNameCurrent',
-  'BirthDate', 'BirthLocation', 'DeathDate', 'DeathLocation',
+  'BirthDate', 'BirthDateDecade', 'BirthLocation', 'DeathDate', 'DeathLocation',
   'Gender', 'Father', 'Mother', 'IsLiving', 'Photo', 'PhotoData',
 ].join(',');
 const DAY = 24 * 60 * 60 * 1000;
@@ -24,7 +24,7 @@ export async function fetchAncestry(wikiTreeId, { generations = 6, cacheDir = '.
     throw new WikiTreeError(`"${wikiTreeId}" doesn't look like a WikiTree ID (expected something like Windsor-1).`);
   }
   const depth = Math.min(Math.max(generations, 1), 10);
-  const cacheFile = path.join(cacheDir, `${wikiTreeId}.${depth}.v2.json`);
+  const cacheFile = path.join(cacheDir, `${wikiTreeId}.${depth}.v3.json`);
 
   let body = await readCache(cacheFile);
   if (!body) {

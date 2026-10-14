@@ -25,4 +25,6 @@ export default [
   { from: 1940, to: 1954, regions: ['england', 'scotland', 'wales'], text: 'Food rationing in Britain ran from 1940 to 1954, with sugar, butter and meat limited for years after the war ended.' },
   { from: 1942, to: 1946, regions: [USA], text: 'Wartime rationing in the United States limited sugar, meat, butter and canned goods, and families planted victory gardens.' },
   { from: 1950, to: 1975, regions: [USA], text: 'Supermarkets, frozen foods and the first TV dinners, sold from 1953, changed how fast an ordinary weeknight meal could be made.' },
+  { from: 1975, to: 1995, regions: [USA], text: 'Microwave ovens moved from restaurants into homes, and by the 1990s most American households had one, which changed how leftovers and quick meals were made.' },
+  { from: 1995, to: 2015, regions: [USA], text: 'Recipes began to travel online: from the late 1990s many cooks looked them up and shared them on the web instead of copying them by hand from cards and cookbooks.' },
 ];

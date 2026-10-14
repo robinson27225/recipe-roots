@@ -325,7 +325,7 @@ function familyPart(familyRecipes, { people, chapters, photos, peopleNotes, mode
       const note = peopleNotes?.[c.recipes[0].ancestor] ?? null;
       c.profile = cookProfile({ person: c.person, people, chapters, note, relation: c.relation, name: c.name });
       c.photoNote = note?.photoNote ?? c.photoNote;
-      c.name = c.profile.name; c.born = c.profile.born;
+      c.name = c.profile.name; c.born = c.profile.born ?? c.profile.bornApprox;
     } else c.born = null;
     c.recipes.sort((a, b) => CATEGORIES.indexOf(a.category) - CATEGORIES.indexOf(b.category) || a.title.localeCompare(b.title));
     return c;
