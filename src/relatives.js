@@ -34,20 +34,24 @@ export function relativeRelation(person, gens) {
  * Returns { person, relation, direct, people } where `people` includes anything newly
  * fetched, or null when they can't be found or are living.
  */
-export async function resolvePerson(wikiTreeId, people, rootId, { fetchImpl, cacheDir } = {}) {
+export async function resolvePerson(wikiTreeId, people, rootId, { fetchImpl, cacheDir, allowLiving = null } = {}) {
+  // A living person is only ever returned when the family said so ("permission": true): then as a copy flagged
+  // PermittedLiving, which the book treats gently (no dates or places, only name, relation, parents and photo).
+  const permitted = (p) => ({ ...p, PermittedLiving: true });
+  const mayShow = (p) => !living(p) || allowLiving?.has(wikiTreeId);
   const gens = generations(people, rootId);
   const inLine = [...people.values()].find((p) => p.Name === wikiTreeId);
   if (inLine) {
-    if (living(inLine)) return null;
-    return { person: inLine, relation: relationLabel(gens.get(inLine.Id), inLine.Gender), direct: true, people };
+    if (!mayShow(inLine)) return null;
+    return { person: living(inLine) ? permitted(inLine) : inLine, relation: relationLabel(gens.get(inLine.Id), inLine.Gender), direct: true, people };
   }
   let fetched;
   try { fetched = await fetchAncestry(wikiTreeId, { generations: 2, fetchImpl, cacheDir }); }
   catch (e) { if (e instanceof WikiTreeError) return null; throw e; }
   const person = fetched.people.get(fetched.rootId);
-  if (!person || living(person)) return null;
+  if (!person || !mayShow(person)) return null;
   const merged = new Map([...fetched.people, ...people]); // the main tree wins on any overlap
-  return { person, relation: relativeRelation(person, gens), direct: false, people: merged };
+  return { person: living(person) ? permitted(person) : person, relation: relativeRelation(person, gens), direct: false, people: merged };
 }
 
 /** Siblings of every ancestor (aunts, uncles, great-aunts...), via one batched API call per 100. */

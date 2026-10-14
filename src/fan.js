@@ -9,7 +9,10 @@ const yr = (d) => { const y = parseInt(String(d ?? '').slice(0, 4), 10); return 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 function cell(p) {
-  if (!p || p.IsLiving === 1 || p.IsLiving === '1') return null; // living people never appear
+  const isLiving = p?.IsLiving === 1 || p?.IsLiving === '1';
+  if (!p || (isLiving && !p.PermittedLiving)) return null; // living people never appear, unless the family said so
+  // A permitted living person shows only a name (the one supplied with their recipe): no dates, no place.
+  if (p.PermittedLiving) return { name: p.DisplayNameOverride ?? displayName(p), years: '', place: '' };
   const b = yr(p.BirthDate), d = yr(p.DeathDate);
   return {
     name: displayName(p),

@@ -12,6 +12,7 @@
 //     "permission": true                (optional: the person, or their family, agreed to be named. Needed for anyone
 //                                      who is living or whose profile is private, who are otherwise left out)
 //     "ancestorName": "Jean Smith"      (optional: the name to print when the profile can't be read; used with "permission")
+//     "relation": "mother"              (optional: printed beside the name when the person can't be looked up, e.g. a living relative)
 //     "photoNote": "Taken at the farm, 1948" }   (optional: extra caption for the person's profile photo,
 //                                      e.g. what the WikiTree photo page's comment says; the API can't supply that)
 import { readFile } from 'node:fs/promises';
@@ -46,7 +47,7 @@ export function parseFamilyRecipes(raw) {
       ingredients: ingredients.map((x) => x.trim()).filter(Boolean),
       directions: directions.map((x) => x.trim()).filter(Boolean), story: r.story?.trim() || null,
       thirdParty: r.thirdParty === true, rightsHolder: r.rightsHolder && typeof r.rightsHolder === 'object' ? r.rightsHolder : null,
-      permission: r.permission === true, suppliedName: typeof r.ancestorName === 'string' ? r.ancestorName.trim() || null : null,
+      permission: r.permission === true, suppliedName: typeof r.ancestorName === 'string' ? r.ancestorName.trim() || null : null, suppliedRelation: typeof r.relation === 'string' ? r.relation.trim() || null : null,
       yield: typeof r.yield === 'string' ? r.yield.trim() || null : null,
       category: CATEGORIES.includes(r.category) ? r.category : null,
       source: typeof r.source === 'string' ? r.source.trim() || null : null,
@@ -68,14 +69,15 @@ export function parseFamilyRecipes(raw) {
 export async function attachRelatives(recipes, people, rootId, { warn = () => {}, ...opts } = {}) {
   let all = people;
   const out = [];
+  const allowLiving = new Set(recipes.filter((r) => r.permission).map((r) => r.ancestor)); // people the family agreed may be named
   for (const r of recipes) {
-    const hit = await resolvePerson(r.ancestor, all, rootId, opts);
+    const hit = await resolvePerson(r.ancestor, all, rootId, { ...opts, allowLiving });
     if (!hit) {
       if (!r.permission) {
         warn(`Left out "${r.title}": ${r.ancestor} is living, private or not found, so can't be confirmed as deceased. Add "permission": true (and "ancestorName") to the recipe if they or their family agreed to be named, or check the ID with \`recipe-roots ancestors <ID> --relatives\`.`);
         continue;
       }
-      out.push({ ...r, person: null, ancestorName: r.suppliedName ?? r.ancestor, relation: null, direct: false });
+      out.push({ ...r, person: null, ancestorName: r.suppliedName ?? r.ancestor, relation: r.suppliedRelation ?? null, direct: false });
       continue;
     }
     all = hit.people;

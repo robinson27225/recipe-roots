@@ -26,7 +26,7 @@ const BY_TITLE = [
   ['Preserves, Sauces & Drinks', ['jam', 'jelly', 'preserve', 'pickle', 'relish', 'chutney', 'marmalade', 'syrup', 'sauce', 'gravy', 'tea\\b', 'punch', 'lemonade', 'cider', 'cocoa', 'drink', 'cordial', 'wine', 'compote', 'butter\\b(?!\\s*(cake|cookie|bread|scotch))']],
   ['Cookies & Candy', ['cookie', 'brownie', 'fudge', 'candy', 'candies', 'divinity', 'toffee', 'caramel', 'truffle', 'macaroon', 'biscotti', 'snickerdoodle', 'pfeffern', 'brittle', 'bars?\\b', 'noels', 'drop cakes', 'shortbread']],
   ['Soups & Stews', ['soup', 'stew', 'chowder', 'broth', 'bisque', 'gumbo', 'chili', 'borscht', 'goulash', 'slumgullion']],
-  ['Sides, Salads & Dips', ['salad', 'slaw', 'dressing', 'dip\\b', 'stuffing', 'succotash', 'corn pudding', 'pickled eggs', 'stamppot']],
+  ['Sides, Salads & Dips', ['salad', 'slaw', 'coleslaw', 'dressing', 'dip\\b', 'stuffing', 'succotash', 'corn pudding', 'pickled eggs', 'stamppot']],
   ['Main Dishes', [...PROTEIN, 'meatloaf', 'meat loaf', 'casserole', 'pot pie', 'dumpling', 'pasta', 'spaghetti', 'cavatelli', 'lasagna', 'curry', 'taco', 'enchilada', 'tourti', 'rouladen', 'pierogi', 'sandwich', 'melts?\\b', 'tetrazzini', 'paella', 'tofu', 'loaf']],
   ['Cakes, Pies & Desserts', ['pudding', 'cobbler', 'crisp\\b', 'custard', 'tart\\b', 'pie\\b', 'pies\\b', 'cake\\b', 'cheesecake', 'torte', 'dessert', 'ice cream', 'trifle', 'mousse', 'frosting', 'icing', 'parfait', 'flan', 'strudel', 'apple.*dumpling', 'floating island', 'panna cotta', 'pavlova']],
   ['Breads & Breakfast', ['bread', 'biscuit', 'rolls?\\b', 'muffin', 'pancake', 'waffle', 'scone', 'cornbread', 'buns?\\b', 'doughnut', 'donut', 'granola', 'hash\\b', 'lefse', 'pretzel', 'johnnycake', 'johnny cake', 'crepe', 'oatmeal\\b', 'porridge', 'mush\\b']],

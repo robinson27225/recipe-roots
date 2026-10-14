@@ -43,21 +43,23 @@ export function lifeSentence({ born, birthPlace, parents = [], died, deathPlace,
  *   person: the WikiTree person (non-living), people: the tree, chapters: the book's chapters (to link a move),
  *   note: the family's own words about this cook, { story } from family-people.json.
  */
-export function cookProfile({ person, people, chapters = [], note = null, relation = null }) {
-  const born = yearOf(person.BirthDate), died = yearOf(person.DeathDate);
+export function cookProfile({ person, people, chapters = [], note = null, relation = null, name = null }) {
+  // A living person the family agreed to name: name, relation, parents and photo, but no dates or places.
+  const keepPrivate = person.PermittedLiving === true;
+  const born = keepPrivate ? null : yearOf(person.BirthDate), died = keepPrivate ? null : yearOf(person.DeathDate);
   const parents = [person.Father, person.Mother].map((id) => people.get(id)).filter((p) => p && !living(p)).map(displayName);
-  const birthPlace = placeOf(person.BirthLocation), deathPlace = placeOf(person.DeathLocation);
+  const birthPlace = keepPrivate ? null : placeOf(person.BirthLocation), deathPlace = keepPrivate ? null : placeOf(person.DeathLocation);
   const lifeStart = born ?? (died ? died - 70 : null);
   const lo = lifeStart != null ? lifeStart + 12 : null;
   const hi = died ?? (born != null ? born + 75 : null);
-  const regionKeys = [regionOf(person.BirthLocation)?.key, regionOf(person.DeathLocation)?.key].filter(Boolean);
+  const regionKeys = keepPrivate ? [] : [regionOf(person.BirthLocation)?.key, regionOf(person.DeathLocation)?.key].filter(Boolean);
   const kitchen = lo != null && hi != null && hi >= lo ? kitchenHistory({ lo, hi: Math.min(hi, lo + 75), regionKeys }, 3) : [];
   const n = chapters.findIndex((c) => c.story.people.some((p) => p.id === person.Id));
   const chapter = n >= 0 ? { number: n + 1, from: chapters[n].story.from.label, to: chapters[n].story.to.label, lo: chapters[n].story.lo, hi: chapters[n].story.hi } : null;
   return {
-    name: displayName(person), relation, born, died, birthPlace, deathPlace, parents,
+    name: name ?? displayName(person), relation, born, died, birthPlace, deathPlace, parents,
     years: born || died ? `${born ?? '?'}–${died ?? '?'}` : '',
-    life: lifeSentence({ born, birthPlace, parents, died, deathPlace, age: ageAtDeath(person.BirthDate, person.DeathDate) }),
+    life: lifeSentence({ born, birthPlace, parents, died, deathPlace, age: keepPrivate ? null : ageAtDeath(person.BirthDate, person.DeathDate) }),
     kitchen, chapter, story: note?.story ?? null,
   };
 }

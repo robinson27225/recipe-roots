@@ -27,5 +27,184 @@
     "image": "scans/Budd-1260-Budd-1260_recipe-card.jpg",
     "transcribedByAI": true,
     "reviewed": true
+  },
+  {
+    "title": "Ginger Bread Cookies",
+    "ancestor": "Ames-1948",
+    "category": "Cookies & Candy",
+    "contributor": "Azure Robinson",
+    "ingredients": [
+      "2 Tablespoons White sugar",
+      "2 1/4 Flour",
+      "2 Teaspoons Ground Ginger",
+      "1 Teaspoon baking soda",
+      "3/4 Teaspoon Cinnamon",
+      "1/2 Teaspoon Cloves",
+      "1/4 Teaspoon Salt",
+      "3/4 cup Margarine, softened",
+      "1 Cup White sugar",
+      "1 Lg egg",
+      "1/4 cup Molasses",
+      "1 TBLS Water"
+    ],
+    "directions": [
+      "Preheat. Set aside 2 TBLS sugar in small bowl",
+      "Sift: Flour, ginger, B. Soda, cinnamon, cloves & salt",
+      "Cream: Butter, sugar = until light + fluffy. Beat in egg.",
+      "Stir in: molasses & water - Let set 40 to 50 min.",
+      "Shape into 24 walnut sized balls -",
+      "Roll in sugar",
+      "Place 2\" apart on ungreased sheet - Flatten slightly",
+      "Cool on sheet 5\" After Baking 8 - 10 min",
+      "Transfer to wire rack"
+    ],
+    "story": "350°. Flour hands or gloves. (\"Butter\" is written above \"Margarine\" in the ingredients.)",
+    "image": "scans/Ames-1948-Ames-1948__Ginger_Bread_Cookies.jpg",
+    "transcribedByAI": true,
+    "reviewed": true
+  },
+  {
+    "title": "Banana Bread",
+    "ancestor": "Boushon-120",
+    "category": "Breads & Breakfast",
+    "contributor": "Azure Robinson",
+    "ingredients": [
+      "1/3 Cup butter softened",
+      "1 1/4 Cups (sugar) Sweetener",
+      "2 eggs",
+      "4 Ripe bananas mashed",
+      "1 Cup Sour cream",
+      "1 Tsp Vanilla extract",
+      "2 1/2 Cups Flour",
+      "1 Tsp Cinnamon",
+      "2 Tsp baking soda",
+      "1/2 Tsp Salt"
+    ],
+    "directions": [
+      "Flour, cinnamon, baking soda and salt: mix + set aside",
+      "Cream Butter - Add sugar - Add eggs beating after each",
+      "Add sour cream, bananas, vanilla = combine",
+      "Add flour, salt, cinn, B. soda - combine"
+    ],
+    "story": "325°. 2 loaf pans. 1 hr = toothpick-clean.",
+    "image": "scans/Boushon-120-Boushon-120__Banana_Bread.jpg",
+    "transcribedByAI": true,
+    "reviewed": true
+  },
+  {
+    "title": "Cream of Celery Soup",
+    "ancestor": "Harrison-14231",
+    "category": "Soups & Stews",
+    "contributor": "Azure Robinson",
+    "ingredients": [
+      "1/4 C Butter",
+      "1 sm yellow onion (approx 1 cup)",
+      "2 C Celery",
+      "1 lg clove garlic - minced",
+      "All chopped fine",
+      "1 1/2 C chicken broth",
+      "1 1/2 Cups whole milk - or use pt Cream for thicker and tastier",
+      "1 t salt",
+      "1/2 t sugar (or substitute)",
+      "Pepper to taste 1/8 t Recommended"
+    ],
+    "directions": [
+      "Melt the butter and cook onions, celery until translucent, adding in the garlic the last couple of min.",
+      "Add chicken broth (reserve 1/4 cup) and milk - simmer - reduce to med heat -",
+      "Add remaining ingredients and simmer uncovered for 15 min",
+      "Mix flour & reserved chicken broth and add to soup and stir and cook for another few minutes until thickened."
+    ],
+    "story": null,
+    "image": "scans/Harrison-14231-Harrison-14231__Cream_of_Celery_Soup.jpg",
+    "transcribedByAI": true,
+    "reviewed": true
+  },
+  {
+    "title": "Waffles",
+    "ancestor": "Jones-67676",
+    "category": "Breads & Breakfast",
+    "contributor": "Azure Robinson",
+    "ingredients": [
+      "2 1/4 C Flour",
+      "1/4 C sugar",
+      "1 T baking pwd",
+      "3/4 t salt",
+      "2 cups milk",
+      "1/2 C butter un-",
+      "2 Lg eggs",
+      "2 t vanilla"
+    ],
+    "directions": [
+      "Combine flour, sugar, bp & salt - in bowl.",
+      "Whisk together milk, melted butter, eggs & vanilla",
+      "Stir all together until just combined"
+    ],
+    "story": null,
+    "image": "scans/Jones-67676-Jones-67676__Waffles.jpg",
+    "transcribedByAI": true,
+    "reviewed": true
+  },
+  {
+    "title": "Coleslaw",
+    "ancestor": "Peasley-221",
+    "category": "Sides, Salads & Dips",
+    "contributor": "Azure Robinson",
+    "ingredients": [
+      "8 Cups chopped cabbage (finely)",
+      "1/4 C Carrot",
+      "2 1/2 T minced onion",
+      "1/2 C Mayonnaise",
+      "1/3 C Sugar",
+      "1/4 C Whole milk",
+      "1/4 C Butter milk",
+      "2 T Lemon juice",
+      "1 1/2 T Apple cider vinegar",
+      "1/2 t Salt",
+      "1/8 t Pepper"
+    ],
+    "directions": [],
+    "story": null,
+    "image": "scans/Peasley-221-Peasley-221__Coleslaw.jpg",
+    "transcribedByAI": true,
+    "reviewed": true,
+    "permission": true,
+    "ancestorName": "Frances (Peasley) Robinson",
+    "relation": "mother"
+  },
+  {
+    "title": "Soft Oatmeal Cookies w/ Choc Chips",
+    "ancestor": "Peasley-221",
+    "category": "Cookies & Candy",
+    "contributor": "Azure Robinson",
+    "ingredients": [
+      "1 1/2 C Flour",
+      "1 t Cinnamon",
+      "1 t baking soda",
+      "1 t Salt",
+      "1 C Butter softened (unsalted)",
+      "1 C Packed brown sugar",
+      "1/2 C White sugar",
+      "2 Lg eggs (room temp)",
+      "1 T Molasses",
+      "2 t Vanilla",
+      "3 C Oats",
+      "(1 3/4 Cup semisweet choc chips)",
+      "(Raisins)"
+    ],
+    "directions": [
+      "Whisk dry ingredients, set aside",
+      "Beat butter till smooth & creamed",
+      "Add sugars, beat",
+      "Add eggs, molasses & vanilla",
+      "Add dry ingredients",
+      "Refrigerate before baking 350° 13-15 min"
+    ],
+    "story": null,
+    "image": "scans/Peasley-221-Peasley-221_Soft_Oatmeal_Cookies.jpg",
+    "transcribedByAI": true,
+    "reviewed": true,
+    "permission": true,
+    "ancestorName": "Frances (Peasley) Robinson",
+    "relation": "mother"
   }
 ]

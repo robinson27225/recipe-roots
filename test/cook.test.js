@@ -53,3 +53,38 @@ test('cooks are ordered oldest first, with the undated last', () => {
   const names = sortCooks([{ name: 'C', born: 1900 }, { name: 'A', born: null }, { name: 'B', born: 1850 }, { name: 'Z', born: null }]).map((c) => c.name);
   assert.deepEqual(names, ['B', 'C', 'A', 'Z']);
 });
+
+import { resolvePerson } from '../src/relatives.js';
+
+test('a living person the family agreed to name gets name, relation and parents, but no dates or places', () => {
+  const people = new Map([
+    [1, { Id: 1, Name: 'Lee-1', IsLiving: 1, Gender: 'Female', Father: 2, Mother: 3, BirthDate: '1950-02-03', BirthLocation: 'Olympia, Washington, USA', FirstName: 'Jo', LastNameAtBirth: 'Lee' }],
+    [2, { Id: 2, Name: 'Lee-2', IsLiving: 0, Gender: 'Male', FirstName: 'Ed', LastNameAtBirth: 'Lee', BirthDate: '1920-01-01', DeathDate: '1990-01-01' }],
+    [3, { Id: 3, Name: 'Lee-3', IsLiving: 0, Gender: 'Female', FirstName: 'Ann', LastNameAtBirth: 'Lee', BirthDate: '1922-01-01', DeathDate: '1999-01-01' }],
+  ]);
+  const p = { ...people.get(1), PermittedLiving: true };
+  const prof = cookProfile({ person: p, people, relation: 'mother' });
+  assert.equal(prof.born, null);
+  assert.equal(prof.birthPlace, null);
+  assert.equal(prof.years, '');
+  assert.equal(prof.life, 'Child of Ed Lee and Ann Lee.');
+  assert.deepEqual(prof.kitchen, []);                       // no dates, so no "in their time" box
+  assert.equal(prof.relation, 'mother');
+});
+
+test('a name supplied with the recipe is used when the public profile shows only a surname', () => {
+  const people = new Map([[1, { Id: 1, Name: 'Lee-1', IsLiving: 1, PermittedLiving: true, LastNameAtBirth: 'Lee' }]]);
+  assert.equal(cookProfile({ person: people.get(1), people, name: 'Jo (Lee) Smith' }).name, 'Jo (Lee) Smith');
+  assert.equal(cookProfile({ person: people.get(1), people }).name, 'Lee');
+});
+
+import { pedigree } from '../src/fan.js';
+
+test('a permitted living person is the centre of their own fan chart, by supplied name only', () => {
+  const self = { Id: 1, Name: 'Lee-1', IsLiving: 1, PermittedLiving: true, DisplayNameOverride: 'Jo (Lee) Smith', BirthDate: '1950-02-03', Father: 2 };
+  const people = new Map([[1, self], [2, { Id: 2, Name: 'Lee-2', IsLiving: 0, FirstName: 'Ed', LastNameAtBirth: 'Lee', BirthDate: '1920-01-01' }]]);
+  const [centre, father] = pedigree(people, 1);
+  assert.deepEqual(centre, { name: 'Jo (Lee) Smith', years: '', place: '' });      // no dates or places
+  assert.equal(father.name, 'Ed Lee');
+  assert.equal(pedigree(new Map([[1, { ...self, PermittedLiving: false }]]), 1)[0], null);   // living and not permitted: not drawn
+});

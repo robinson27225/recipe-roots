@@ -67,3 +67,21 @@ test('a recipe can say what it makes; the book prints the card\'s own words, lab
   assert.equal(yieldLine(null), '');
   assert.equal(yieldLine('<b>'), '<span class="lab">Makes</span>&lt;b&gt;');
 });
+
+import { attachRelatives } from '../src/family.js';
+import { WikiTreeError } from '../src/wikitree.js';
+const denied = async () => { throw new WikiTreeError('permission denied'); };
+
+test('a living relative with permission is kept under the name and relation supplied, labelled as a cook', async () => {
+  const [r] = parseFamilyRecipes(JSON.stringify([{ title: 'Coleslaw', ancestor: 'Smith-221', permission: true, ancestorName: 'Jo (Smith) Lee', relation: 'mother', ingredients: ['cabbage'] }]));
+  const out = await attachRelatives([r], new Map(), 'Lee-1', { fetchImpl: denied });
+  assert.equal(out.recipes.length, 1);
+  assert.deepEqual([out.recipes[0].ancestorName, out.recipes[0].relation, out.recipes[0].person], ['Jo (Smith) Lee', 'mother', null]);
+  const [none] = parseFamilyRecipes(JSON.stringify([{ title: 'Pie', ancestor: 'Smith-222', ingredients: ['apple'] }]));
+  const dropped = await attachRelatives([none], new Map(), 'Lee-1', { fetchImpl: denied, warn: () => {} });
+  assert.equal(dropped.recipes.length, 0);                    // without permission a person who can't be confirmed deceased is left out
+});
+
+test('"Coleslaw" is a side, not "Other"', () => {
+  assert.equal(categorize({ title: 'Coleslaw', ingredients: ['cabbage'] }), 'Sides, Salads & Dips');
+});

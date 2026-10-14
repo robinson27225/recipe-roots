@@ -116,3 +116,12 @@ test('a crowded chapter text page is set a little smaller; a light one is not', 
   assert.equal(chapterTextClass(8, 'x'.repeat(1250)), 'chapter-text tight');
   assert.equal(chapterTextClass(1, ['x'.repeat(900), 'y'.repeat(900)]), 'chapter-text tight');
 });
+
+import { recipeLines } from '../src/book.js';
+
+test('a long family recipe counts as more lines than a short one', () => {
+  const short = { ingredients: ['a', 'b', 'c', 'd'], directions: ['Mix.'] };
+  const long = { ingredients: Array(12).fill('1 cup something'), directions: Array(9).fill('A step of about forty characters long.'), story: '350°. Flour hands or gloves.', transcribedByAI: true, reviewed: false };
+  assert.ok(recipeLines(short) < 10);
+  assert.ok(recipeLines(long) > 19);
+});

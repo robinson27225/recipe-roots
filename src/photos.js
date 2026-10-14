@@ -70,7 +70,7 @@ export async function fetchPhotoInfo(person, { cacheDir = '.cache', fetchImpl = 
 /** Fetch one person's primary photo as { uri, name, caption } (name = WikiTree ID for the credit), or null. */
 export async function fetchPhoto(person, { cacheDir = '.cache', fetchImpl = fetch } = {}) {
   const original = photoUrl(person);
-  if (!original || living(person)) return null;
+  if (!original || (living(person) && person.PermittedLiving !== true)) return null;
   const info = await fetchPhotoInfo(person, { cacheDir, fetchImpl });
   const caption = photoCaption(info, displayName(person));
   const file = path.join(cacheDir, 'photos', `${person.Name.replace(/[^\w.-]/g, '_')}${path.extname(person.PhotoData.path) || '.jpg'}`);

@@ -62,6 +62,8 @@ p { margin: 0 0 0.7em; orphans: 3; widows: 3; hyphens: auto; }
 .chapter-open .fan { width: 66%; margin: 0 auto; }
 .chapter-open .kitchen { margin-top: .2in; }
 .chapter-text { break-after: page; }
+.recipe.family.tight { font-size: 9.6pt; line-height: 1.4; }
+.recipe.family.tight p, .recipe.family.tight li { margin-bottom: .3em; }
 .chapter-text.tight { font-size: 9.4pt; line-height: 1.42; }
 .chapter-text.tight p { margin-bottom: .55em; }
 a.wt { color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; }
@@ -114,7 +116,7 @@ a.wt { color: inherit; text-decoration: none; border-bottom: 1px dotted currentC
 .check { font-size: 8.5pt; color: var(--clay); border: 1px solid var(--clay); border-radius: 6px; padding: .04in .12in; }
 .scan-page .scan { display: block; max-width: 100%; max-height: 4.5in; margin: .15in auto; border: 1px solid var(--rule); }
 .small-fan { width: 62%; margin: .1in auto 0; }
-.original { break-before: page; text-align: center; } .original img { max-width: 100%; max-height: 7.4in; border: 1px solid var(--rule); }
+.original { break-before: page; break-inside: avoid; text-align: center; } .original img { max-width: 100%; max-height: 7in; border: 1px solid var(--rule); }
 .index { page: plain; break-before: page; font-size: 9pt; }
 .index h2 { margin-bottom: .2in; font-size: 15pt; }
 .index li { margin-bottom: .05in; }
@@ -242,8 +244,18 @@ export function yieldLine(y) {
   return /^(makes?|serves?|yields?)\b/i.test(text) ? esc(text) : `<span class="lab">Makes</span>${esc(text)}`;
 }
 
+/**
+ * Roughly how many lines a family recipe fills (two ingredient columns, directions wrapped at ~70 characters, a
+ * note box): a long card is set a little smaller so its last line doesn't land alone on the next page.
+ */
+export function recipeLines(r) {
+  const wrap = (s, n = 70) => Math.max(1, Math.ceil(String(s).length / n));
+  return Math.ceil(r.ingredients.length / 2) + r.directions.reduce((n, d) => n + wrap(d), 0)
+    + (r.story ? wrap(r.story, 60) + 2 : 0) + (r.transcribedByAI && !r.reviewed ? 3 : 0) + (r.yield ? 1 : 0) + (r.source ? 1 : 0);
+}
+
 function familyRecipe(r, { id, profiled, modelLabel }) {
-  const who = profiled ? '' : `<p class="who"><span class="lab">${r.direct || !r.person ? 'Ancestor' : 'Relative'}</span>${esc(r.ancestorName)}${r.relation ? `, ${esc(r.relation)}` : ''} <span class="small">· ${wtId(r.ancestor)}</span></p>`;
+  const who = profiled ? '' : `<p class="who"><span class="lab">${r.direct ? 'Ancestor' : r.person ? 'Relative' : 'Cook'}</span>${esc(r.ancestorName)}${r.relation ? `, ${esc(r.relation)}` : ''} <span class="small">· ${wtId(r.ancestor)}</span></p>`;
   const head = `${mk(id)}
   <div class="side">${r.pageOnly ? 'In their own hand' : profiled ? `From the kitchen of ${esc(r.ancestorName)}` : 'From the family kitchen'}</div>
   <h3>${esc(r.title)}</h3>
@@ -262,7 +274,7 @@ function familyRecipe(r, { id, profiled, modelLabel }) {
 </section>${period}`;
   }
   return `
-<section class="recipe family">${head}
+<section class="recipe family${recipeLines(r) > 19 ? ' tight' : ''}">${head}
   ${r.ingredients.length ? `<h4>Ingredients</h4>\n  <ul class="two">${r.ingredients.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : ''}
   ${r.directions.length ? `<h4>Directions</h4>\n  <div class="directions">${r.directions.map((d) => `<p>${esc(d)}</p>`).join('')}</div>` : ''}
   ${r.story ? `<div class="story">${esc(r.story)}</div>` : ''}
@@ -278,7 +290,8 @@ function cookPage(cook, id, { people, photos }) {
   const note = cook.photoNote ? `${esc(cook.photoNote)}<br>` : '';
   const placeholder = !photo && photos?.size > 0 ? PLACEHOLDER[cook.person?.Gender] : null;
   const portrait = placeholder ? `<figure class="portrait ph"><img src="${placeholder}" alt=""></figure>` : photo ? `<figure class="portrait"><img src="${photo.uri}" alt="${esc(profile.name)}"><figcaption>${photo.caption ? `${esc(photo.caption)}<br>` : ''}${note}${photo.credit ? `Photo: ${esc(photo.credit)}` : `Photo: WikiTree ${photo.pageUrl ? `<a class="wt" href="https://www.wikitree.com${esc(photo.pageUrl)}">photo page</a>, ` : ''}profile ${wtId(photo.name)}`}</figcaption></figure>` : '';
-  const fan = people ? fanChartSvg(pedigree(people, cook.person.Id)) : '';
+  const fanPeople = people && cook.person.PermittedLiving ? new Map(people).set(cook.person.Id, { ...cook.person, DisplayNameOverride: profile.name }) : people;
+  const fan = people ? fanChartSvg(pedigree(fanPeople, cook.person.Id)) : '';
   const move = profile.chapter ? `<p class="small">Their move from ${esc(profile.chapter.from)} to ${esc(profile.chapter.to)} is in <a href="#ch${profile.chapter.number}">Chapter ${profile.chapter.number}</a>.</p>` : '';
   return `
 <section class="cook-open${photo ? ' has-photo' : ''}">${mk(id)}
@@ -310,7 +323,7 @@ function familyPart(familyRecipes, { people, chapters, photos, peopleNotes, mode
   const cooks = [...groups.values()].map((c) => {
     if (c.person) {
       const note = peopleNotes?.[c.recipes[0].ancestor] ?? null;
-      c.profile = cookProfile({ person: c.person, people, chapters, note, relation: c.relation });
+      c.profile = cookProfile({ person: c.person, people, chapters, note, relation: c.relation, name: c.name });
       c.photoNote = note?.photoNote ?? c.photoNote;
       c.name = c.profile.name; c.born = c.profile.born;
     } else c.born = null;
