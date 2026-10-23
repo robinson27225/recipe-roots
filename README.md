@@ -99,7 +99,7 @@ Each scan is assigned to a person by **file name** (`Smith-1234__beef-roll.jpg`)
 - **Transcribe** (default): Gemma 3's vision reads the card into ingredients and directions, exactly as written (`[illegible]` instead of guessing). A second pass reads only the numbers and flags any disagreement, because a misread "tsp"/"tbsp" ruins a recipe. The page stays marked *Transcribed by AI, check amounts* until you set `"reviewed": true`.
 - **`--page-only`**: no transcription; the scan itself is the page. Best for handwriting, and needs no model.
 - The scanned image is printed on the page after its transcription (`--no-scan-page` to leave it out).
-- Edit `family-recipes.json` freely: fix the model's mistakes, change `ancestor`, add a `story`, a `source` citation (printed under the credit), a `photoNote`, or set `showScan`.
+- Edit `family-recipes.json` freely: fix the model's mistakes, change `ancestor`, add a `story` (the review sheet suggests what to write: the occasion, where the dish came from, how it felt to eat it), a `source` citation (printed under the credit), a `photoNote`, or set `showScan`.
 - Anyone who is living or whose profile can't be read is left out unless the recipe has `"permission": true`. With permission, a living person gets a cook page showing only the name you supply, their relation, their photo, their (deceased) parents, "born in the 1930s" (the decade WikiTree shows publicly) and kitchen history for the years they cooked, following where their parents lived. Never a birth date, age or place.
 
 Scans never leave the machine: the vision model runs locally.

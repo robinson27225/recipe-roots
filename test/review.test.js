@@ -20,3 +20,13 @@ test('review sheet puts each scan beside its transcription, flags unreviewed one
 test('review sheet says so when nothing is waiting', () => {
   assert.match(renderReview([]), /Nothing is waiting to be checked/);
 });
+
+test('review sheet asks for the family story, open when there is none', () => {
+  const none = renderReview([{ title: 'A', ancestor: 'S-1', ingredients: ['x'], directions: ['y'] }]);
+  assert.match(none, /<details class="prompts" open>/);
+  assert.match(none, /No family story yet/);
+  assert.match(none, /Thanksgiving/);
+  const has = renderReview([{ title: 'A', ancestor: 'S-1', ingredients: ['x'], directions: ['y'], story: 'Made every Easter.' }]);
+  assert.match(has, /<details class="prompts">/);
+  assert.match(has, /Add more to the story/);
+});

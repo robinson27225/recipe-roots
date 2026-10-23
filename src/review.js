@@ -6,6 +6,13 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const FR = { '¼': '1/4', '½': '1/2', '¾': '3/4', '⅓': '1/3', '⅔': '2/3', '⅛': '1/8' };
 const tokens = (line) => new Set(String(line).replace(/[¼½¾⅓⅔⅛]/g, (c) => ` ${FR[c]} `).match(/\d+(?:[./]\d+)?/g) ?? []);
 
+/** Questions a family story can answer. Printed on the sheet only; the book prints whatever the family writes in "story". */
+export const STORY_PROMPTS = [
+  'Which occasion was it for: a birthday, Thanksgiving, the Sabbath, a funeral supper?',
+  'Where did the dish come from: the cook\'s own cultural background, a neighbour, a magazine?',
+  'What do you remember about it: the smell, the kitchen, who asked for seconds?',
+];
+
 export function renderReview(recipes, { title = 'Check your scanned recipes' } = {}) {
   const todo = recipes.filter((r) => r.transcribedByAI && !r.reviewed);
   const card = (r) => {
@@ -23,6 +30,9 @@ export function renderReview(recipes, { title = 'Check your scanned recipes' } =
     <h3>Directions</h3><ol>${(r.directions ?? []).map(li).join('')}</ol>
     ${r.yield ? `<h3>Yield</h3><p>${esc(r.yield)}</p>` : ''}
     ${r.story ? `<h3>Notes</h3><p>${esc(r.story)}</p>` : ''}`}
+    <details class="prompts"${r.story ? '' : ' open'}><summary>${r.story ? 'Add more to the story?' : 'No family story yet.'}</summary>
+      <p>Write it in your own words in <code>"story"</code>. The book prints it as you wrote it, in italics. You might say:</p>
+      <ul>${STORY_PROMPTS.map((q) => `<li>${esc(q)}</li>`).join('')}</ul></details>
   </div>
 </section>`;
   };
@@ -36,6 +46,7 @@ export function renderReview(recipes, { title = 'Check your scanned recipes' } =
   h2 { margin: 0 } h3 { font: small-caps 600 .95rem sans-serif; letter-spacing: .08em; margin: 1rem 0 .2rem; color: #355 }
   .meta { color: #666; margin: .1rem 0 } .flag { background: #fdeccd; padding: .4rem .6rem; border-radius: 4px }
   li.chk { background: #fdeccd; border-radius: 3px }
+  .prompts { margin-top: 1rem; color: #555; font-size: .92rem } .prompts summary { cursor: pointer; font-weight: 600 }
   .ok { color: #2e6b3a } .no { color: #a0522d } .none { color: #777; font-style: italic }
   @media (max-width: 700px) { .card { grid-template-columns: 1fr } }
 </style>
