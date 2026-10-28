@@ -61,6 +61,7 @@ Usage: recipe-roots <WikiTree-ID> [options]
   --title <text>      book title
   --dedication <text> dedication page
   --out <dir>         output folder (default out/<WikiTree-ID>)
+  --permitted <ids>   scan: comma-separated WikiTree IDs of living relatives who agreed to be named (keeps "permission": true)
   --my-photos <dir>   your own family photos, named for the person (Smith-1234.jpg); never restricted
   --wikitree-photos   also use WikiTree profile photos. Needs --me, --honor-code-signed and --confirm-permission
   --wikitree-photos-for <IDs>  with --wikitree-photos: only for these people (comma-separated WikiTree IDs), for when you
@@ -86,7 +87,7 @@ const { values: v, positionals } = parseArgs({
     title: { type: 'string' }, 'family-recipes': { type: 'string' }, 'family-people': { type: 'string' },
     relatives: { type: 'boolean', default: false }, write: { type: 'string' }, ancestor: { type: 'string' }, tree: { type: 'string' }, filter: { type: 'string' }, contributor: { type: 'string' }, 'page-only': { type: 'boolean', default: false }, 'no-scan-page': { type: 'boolean', default: false }, 'recipes-file': { type: 'string', default: 'family-recipes.json' }, dedication: { type: 'string' }, out: { type: 'string' },
     'database-url': { type: 'string', default: process.env.DATABASE_URL }, 'embed-model': { type: 'string', default: EMBED_DEFAULTS.model },
-    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'wikitree-photos-for': { type: 'string' }, 'my-photos': { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
+    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'wikitree-photos-for': { type: 'string' }, 'my-photos': { type: 'string' }, permitted: { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
   },
 });
 
@@ -183,14 +184,16 @@ if (id === 'scan') {
     log(`These scans aren't assigned to an ancestor, so nothing was read:\n${unassigned.map((f) => `  ${f}`).join('\n')}\nName them like Smith-1234__beef-roll.jpg, put them in a folder named for the ancestor's WikiTree ID, or pass --ancestor. (Find IDs with: recipe-roots ancestors <your-ID>)`);
     process.exit(1);
   }
+  const permitted = new Set((v.permitted ?? '').split(',').map((x) => x.trim()).filter(Boolean)); // living relatives who agreed to be named
+  const perm = (who) => (permitted.has(who) ? { permission: true, ancestorName: null, relation: null } : {});
   if (v.tree) { // confirm each assigned person is findable (any public relative, not only the direct line)
     const { rootId: treeRoot, people } = await fetchAncestry(v.tree, { generations: Number(v.generations) });
     const bad = [];
     for (const idv of new Set(scans.map((s) => s.ancestor))) {
       const hit = await resolvePerson(idv, people, treeRoot);
-      if (hit) log(`  ${idv} → ${displayName(hit.person)} (${hit.relation})`); else bad.push(idv);
+      if (hit) log(`  ${idv} → ${displayName(hit.person)} (${hit.relation})`); else if (permitted.has(idv)) log(`  ${idv} → not a public deceased profile; kept because you passed --permitted`); else bad.push(idv);
     }
-    if (bad.length) { log(`Couldn't find these as public, non-living profiles: ${bad.join(', ')}. Check the IDs (list them with: recipe-roots ancestors ${v.tree} --relatives).`); process.exit(1); }
+    if (bad.length) { log(`Couldn't find these as public, non-living profiles: ${bad.join(', ')}. Check the IDs (list them with: recipe-roots ancestors ${v.tree} --relatives). If someone is living and has agreed to be named, add --permitted ${bad.join(',')}.`); process.exit(1); }
   }
   let added = 0;
   for (const [i, scan] of scans.entries()) {
@@ -201,7 +204,7 @@ if (id === 'scan') {
     await shrink(src, path.join(dir, rel));
     if (v['page-only']) {
       const title = path.basename(scan.source, path.extname(scan.source)).replace(/^.+?-\d+(?:__|--)/, '').replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase());
-      existing.push({ title, ancestor: who, contributor: v.contributor ?? null, category: categorize({ title }), ingredients: [], directions: [], story: null, image: rel, pageOnly: true });
+      existing.push({ title, ancestor: who, ...perm(who), contributor: v.contributor ?? null, category: categorize({ title }), ingredients: [], directions: [], story: null, image: rel, pageOnly: true });
       added++; log(`  ${path.basename(src)} → page "${title}" (rename it in ${file} if you like)`);
       continue;
     }
@@ -211,7 +214,7 @@ if (id === 'scan') {
       recipes.forEach((r, j) => {
         const f = flags[j];
         const bad = f.onlyInTranscript.length || f.onlyInSecondReading.length;
-        existing.push({ title: r.title, ancestor: who, category: categorize(r), contributor: v.contributor ?? null, ingredients: r.ingredients, directions: r.directions, ...(r.yield ? { yield: r.yield } : {}), story: r.notes, image: rel, transcribedByAI: true, reviewed: false, ...(bad ? { check: { onlyInTranscript: f.onlyInTranscript, onlyInSecondReading: f.onlyInSecondReading } } : {}), ...(v['no-scan-page'] ? { showScan: false } : {}) });
+        existing.push({ title: r.title, ancestor: who, ...perm(who), category: categorize(r), contributor: v.contributor ?? null, ingredients: r.ingredients, directions: r.directions, ...(r.yield ? { yield: r.yield } : {}), story: r.notes, image: rel, transcribedByAI: true, reviewed: false, ...(bad ? { check: { onlyInTranscript: f.onlyInTranscript, onlyInSecondReading: f.onlyInSecondReading } } : {}), ...(v['no-scan-page'] ? { showScan: false } : {}) });
         added++;
         log(`  ${path.basename(src)} → "${r.title}" (${r.ingredients.length} ingredients)${bad ? `\n    ⚠ check amounts: transcript-only [${f.onlyInTranscript.join(', ')}], second-reading-only [${f.onlyInSecondReading.join(', ')}]` : ''}`);
       });
@@ -219,6 +222,7 @@ if (id === 'scan') {
     if (i === 0) await mkdir(dir, { recursive: true });
   }
   await writeFile(file, JSON.stringify(existing, null, 2));
+  if (permitted.size) log(`For ${[...permitted].join(', ')}: fill in "ancestorName" and "relation" (for example "mother") on their recipes in ${file}; that is what the book prints.`);
   log(`Wrote ${added} draft recipe(s) to ${file}. ${v['page-only'] ? '' : 'Open it, fix anything the model misread, and set "reviewed": true.'} Then: recipe-roots <ID> --family-recipes ${file}`);
   process.exit(0);
 }
