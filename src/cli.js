@@ -24,6 +24,8 @@ import { storySignals } from './stickers.js';
 import { structureReceipt } from './modernize.js';
 import { readCookbookFolder, matchTree, toFamilyRecipe } from './cookbook.js';
 import { renderReview } from './review.js';
+import { serveReview } from './reviewserver.js';
+import { execFile } from 'node:child_process';
 import { ingestReceipts, receiptInfo } from './receiptdb.js';
 import { collectScans, shrink, transcribeScan, ancestorFromPath } from './scan.js';
 import { DEFAULTS, modelAvailable } from './llm.js';
@@ -41,7 +43,7 @@ Usage: recipe-roots <WikiTree-ID> [options]
        recipe-roots cookbook <folder-of-PDFs> [--tree <WikiTree-ID>] [--write family-recipes.json]
                                                     read WikiTree 15th Anniversary Cookbook PDFs you have downloaded, and find the
                                                     recipes for (or shared by) people in your tree (macOS only for now)
-       recipe-roots review [family-recipes.json]    write review.html next to it: every scan beside what the model read, to proofread
+       recipe-roots review [family-recipes.json] [--edit]   write review.html next to it: every scan beside what the model read, to proofread. With --edit, open it with boxes to correct the text and add a story, saved back to the file
        recipe-roots scan <image|pdf|folder> [--ancestor <WikiTree-ID>] [--tree <WikiTree-ID>] [--contributor <name>] [--recipes-file family-recipes.json]
          Each scan is assigned to an ancestor by file name (Smith-1234__beef-roll.jpg), else by folder name
          (scans/Smith-1234/card.jpg), else --ancestor. --tree checks the IDs against that tree and shows who they are.
@@ -87,7 +89,7 @@ const { values: v, positionals } = parseArgs({
     title: { type: 'string' }, 'family-recipes': { type: 'string' }, 'family-people': { type: 'string' },
     relatives: { type: 'boolean', default: false }, write: { type: 'string' }, ancestor: { type: 'string' }, tree: { type: 'string' }, filter: { type: 'string' }, contributor: { type: 'string' }, 'page-only': { type: 'boolean', default: false }, 'no-scan-page': { type: 'boolean', default: false }, 'recipes-file': { type: 'string', default: 'family-recipes.json' }, dedication: { type: 'string' }, out: { type: 'string' },
     'database-url': { type: 'string', default: process.env.DATABASE_URL }, 'embed-model': { type: 'string', default: EMBED_DEFAULTS.model },
-    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'wikitree-photos-for': { type: 'string' }, 'my-photos': { type: 'string' }, permitted: { type: 'string' }, help: { type: 'boolean', short: 'h', default: false },
+    'no-pdf': { type: 'boolean', default: false }, 'no-period': { type: 'boolean', default: false }, 'similar-period': { type: 'boolean', default: false }, 'no-stickers': { type: 'boolean', default: false }, 'no-structure': { type: 'boolean', default: false }, me: { type: 'string', default: process.env.RR_ME }, 'honor-code-signed': { type: 'boolean', default: false }, 'confirm-permission': { type: 'boolean', default: false }, 'wikitree-photos': { type: 'boolean', default: false }, 'wikitree-photos-for': { type: 'string' }, 'my-photos': { type: 'string' }, permitted: { type: 'string' }, edit: { type: 'boolean', default: false }, help: { type: 'boolean', short: 'h', default: false },
   },
 });
 
@@ -162,6 +164,12 @@ if (id === 'review') {
   let recipes;
   try { recipes = JSON.parse(await readFile(file, 'utf8')); } catch (e) { log(`Couldn't read ${file}: ${e.message}`); process.exit(1); }
   if (!Array.isArray(recipes)) { log(`${file} should be a JSON array of recipes.`); process.exit(1); }
+  if (v.edit) { // type corrections and family stories into the page; they are saved back to the file
+    const { url } = await serveReview(file);
+    log(`Open ${url} in your browser. Edit, then press "Save changes" (the first save keeps a copy as ${file}.bak). Press Ctrl+C here when you're done.`);
+    if (process.platform === 'darwin') execFile('open', [url], () => {});
+    await new Promise(() => {}); // keep serving until Ctrl+C
+  }
   const out = path.join(path.dirname(file), 'review.html');
   await writeFile(out, renderReview(recipes));
   log(`Wrote ${out}: ${recipes.filter((r) => r.transcribedByAI && !r.reviewed).length} of ${recipes.length} recipes still need checking. Open it in a browser.`);

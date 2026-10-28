@@ -105,7 +105,7 @@ Each scan is assigned to a person by **file name** (`Smith-1234__beef-roll.jpg`)
 
 Scans never leave the machine: the vision model runs locally.
 
-**Proofreading:** `node src/cli.js review family-recipes.json` writes `review.html` beside the file: every scan next to what the model read, the recipes still unchecked marked, and any amounts the two readings disagreed on called out. Fix `family-recipes.json`, then set `"reviewed": true`.
+**Proofreading:** `node src/cli.js review family-recipes.json --edit` opens the sheet in your browser with boxes to correct the ingredients and directions, add a yield and a family story, and tick "I checked this against the card"; "Save changes" writes them back to the file (a `.bak` copy is kept the first time). It runs only on your own computer and stops with Ctrl+C. Without `--edit` it writes a read-only `review.html` beside the file: every scan next to what the model read, the recipes still unchecked marked, and any amounts the two readings disagreed on called out. Fix `family-recipes.json`, then set `"reviewed": true`.
 
 **The people behind the recipes:** `--family-people people.json` takes `{ "Smith-1234": { "story": "She baked on Sundays.", "photoNote": "At the farm, 1948" } }`. The story is printed in the family's words on that cook's page, never rewritten. Everything about a person's life that *isn't* in your file comes from the tree, written by code, not by the model.
 
